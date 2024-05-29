@@ -4,9 +4,13 @@ use super::handler::{divide_zero_handler, page_fault_handler};
 |15         3|2  1|   0|
 | 	   INDEX|  TI| RPL|
  */
+#[allow(unused)]
 const KERNEL_CODE_SELECTOR: u16 = (1 << 3) + (0 << 2) + 0;
+#[allow(unused)]
 const KERNEL_DATA_SELECTOR: u16 = (2 << 3) + (0 << 2) + 0;
+#[allow(unused)]
 const USER_CODE_SELECTOR_64: u16 = (5 << 3) + (0 << 2) + 0;
+#[allow(unused)]
 const USER_DATA_SELECTOR_64: u16 = (6 << 3) + (0 << 2) + 0;
 
 static mut IDT: Idt = Idt::new();
@@ -48,6 +52,7 @@ impl EntryOptions {
         }
         self
     }
+    #[allow(unused)]
     pub fn disable_interrupts(&mut self, disable: bool) -> &mut Self {
         if !disable {
             self.0 |= 1 << 8;
@@ -57,12 +62,14 @@ impl EntryOptions {
 
         self
     }
+    #[allow(unused)]
     pub fn set_privilege_level(&mut self, level: u16) -> &mut Self {
         assert!(level < 8);
         self.0 &= !(0b111 << 13);
         self.0 |= level << 13;
         self
     }
+    #[allow(unused)]
     pub fn set_stack_index(&mut self, index: u16) -> &mut Self {
         assert!(index < 8);
         self.0 &= !(0b111);

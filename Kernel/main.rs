@@ -15,7 +15,9 @@
 
 use core::str::from_raw_parts;
 
-use interrupts::{divide_by_zero, idt::init_idt};
+#[allow(unused_imports)]
+use interrupts::divide_by_zero;
+use interrupts::idt::init_idt;
 use vga::TerminalWriter;
 
 /// Macros, need to be loaded before everything else due to how rust parses
@@ -92,11 +94,26 @@ pub const KERNEL_BASE: u64 = 0xFFFFFFFF80000000;
 
 // Kernel entrypoint (called by arch/<foo>/start.S)
 #[no_mangle]
-pub unsafe extern "C" fn kmain(_multiboot_magic: u64, info: *const MultibootInfo) -> ! {
+pub unsafe extern "C" fn kmain(_multiboot_magic: u64, _info: *const MultibootInfo) -> ! {
     let _multiboot_magic = _multiboot_magic as u32;
     assert_eq!(_multiboot_magic, 0x2BADB002);
+    init();
+    println!("hello world!");
+
+    // print_boot_info(_info);
+
+    // *(0xDEADBEAF as *mut u64) = 100;
+    // divide_by_zero();
+    loop {}
+}
+
+fn init() {
     TerminalWriter::init();
     init_idt();
+}
+
+#[allow(dead_code)]
+fn print_boot_info(info: *const MultibootInfo) {
     unsafe {
         let ptr = (*info).boot_loader_name;
         let name = from_raw_parts(ptr.add(KERNEL_BASE as usize), 4);
@@ -111,11 +128,6 @@ pub unsafe extern "C" fn kmain(_multiboot_magic: u64, info: *const MultibootInfo
         log!("mmap_length {}", mmap_length);
         log!("name {}", name);
 
-        println!("hello world!");
-
-        // *(0xDEADBEAF as *mut u64) = 100;
-        // divide_by_zero();
-
         for i in 0..mmap_length {
             let ptr = ((*info).mmap_addr as u64
                 + KERNEL_BASE
@@ -128,5 +140,4 @@ pub unsafe extern "C" fn kmain(_multiboot_magic: u64, info: *const MultibootInfo
             }
         }
     }
-    loop {}
 }

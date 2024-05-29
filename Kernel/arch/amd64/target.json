@@ -10,8 +10,5 @@
 	"arch": "x86_64",
 		"linker-flavor": "ld",
 		"pre-link-args": { "ld": ["-m64"] },
-		"no-compiler-rt": true,
-		"disable-redzone": true,
-		"eliminate-frame-pointer": false,
-	"morestack": false
+		"disable-redzone": true
 }
