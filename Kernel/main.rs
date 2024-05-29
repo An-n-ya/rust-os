@@ -15,6 +15,8 @@
 
 use core::str::from_raw_parts;
 
+use vga::TerminalWriter;
+
 /// Macros, need to be loaded before everything else due to how rust parses
 #[macro_use]
 mod macros;
@@ -32,6 +34,9 @@ pub mod unwind;
 
 /// Logging code
 mod logging;
+
+/// vga
+mod vga;
 
 #[repr(C, packed)]
 pub struct MultibootInfo {
@@ -80,26 +85,14 @@ struct MultibootMmapEntry {
     typ: u32,
 }
 
-const KERNEL_BASE: u64 = 0xFFFFFFFF80000000;
-
-const VIDEO: usize = 0xb8000;
-const VIDEO_COLUMN: usize = 80;
-const VIDEO_LINES: usize = 24;
-
-fn clear_screen() {
-    unsafe {
-        let ptr = (VIDEO + KERNEL_BASE as usize) as *mut u8;
-        for i in 0..VIDEO_COLUMN * VIDEO_LINES * 2 {
-            *(ptr.add(i)) = 0;
-        }
-    }
-}
+pub const KERNEL_BASE: u64 = 0xFFFFFFFF80000000;
 
 // Kernel entrypoint (called by arch/<foo>/start.S)
 #[no_mangle]
 pub unsafe extern "C" fn kmain(_multiboot_magic: u64, info: *const MultibootInfo) -> ! {
     let _multiboot_magic = _multiboot_magic as u32;
     assert_eq!(_multiboot_magic, 0x2BADB002);
+    TerminalWriter::init();
     // log!("Hello world! 1={}", 1);
     unsafe {
         let ptr = (*info).boot_loader_name;
@@ -114,6 +107,8 @@ pub unsafe extern "C" fn kmain(_multiboot_magic: u64, info: *const MultibootInfo
         log!("mem_upper {:#X}", mem_upper);
         log!("mmap_length {}", mmap_length);
         log!("name {}", name);
+
+        println!("hello world!");
 
         for i in 0..mmap_length {
             let ptr = ((*info).mmap_addr as u64
