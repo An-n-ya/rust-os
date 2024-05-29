@@ -30,7 +30,7 @@ mboot:
 	/* a.out kludge (not used, the kernel is elf) */
 	.long 0, 0, 0, 0	/* load_addr, load_end_addr, bss_end_addr, entry_addr */
 	/* Video mode */
-	.long 0 	/* Mode type (0: LFB) */
+	.long 1 	/* Mode type (0: LFB) */
 	.long 0 	/* Width (no preference) */
 	.long 0 	/* Height (no preference) */
 	.long 32	/* Depth (32-bit preferred) */
@@ -128,10 +128,21 @@ start64_high:
 	mov %ax, %es
 	mov %ax, %fs
 	mov %ax, %gs
-	
+
+
 	/* Set up stack pointer */
 	mov $init_stack, %rsp
-	
+
+    mov mboot_sig, %rdi
+    /* we cannot use "and 0xffffffff, %rsi" directly, so "shr" and "shl" is bypass */
+    shl $32, %rdi
+    shr $32, %rdi
+    mov mboot_ptr, %rsi
+    shl $32, %rsi
+    shr $32, %rsi
+    add $KERNEL_BASE, %rsi
+
+
 	/* call the rust code */
 	call kmain
 
@@ -193,7 +204,7 @@ init_pd:
 	.quad 0x200000 + 0x80 + 3	/* - give it another 2MB, just in case */
 	.rept 512 - 2
 		.quad 0
-	.endr 
+	.endr
 init_stack_base:
 	.rept 0x1000 * 2
 		.byte 0
@@ -215,12 +226,18 @@ GDTPtr:
 	.word GDTEnd - GDT - 1
 	.quad GDT
 .globl GDT
+/* refer to https://wiki.osdev.org/Global_Descriptor_Table */
 GDT:
 	.long 0, 0
         .long 0x00000000, 0x00209A00	/* 0x08: 64-bit Code */
         .long 0x00000000, 0x00009200    /* 0x10: 64-bit Data */
-        .long 0x00000000, 0x0040FA00    /* 0x18: 32-bit User Code */
-        .long 0x00000000, 0x0040F200    /* 0x20: User Data        */
+        /*
+        DB: Size flag.
+            If clear (0), the descriptor defines a 16-bit protected mode segment.
+            If set (1) it defines a 32-bit protected mode segment. A GDT can have both 16-bit and 32-bit selectors at once.
+        */
+        .long 0x00000000, 0x0040FA00    /* 0x18: 32-bit User Code FLAG DB bit */
+        .long 0x00000000, 0x0040F200    /* 0x20: User Data  FLAG DB bit        */
         .long 0x00000000, 0x0020FA00    /* 0x28: 64-bit User Code       */
         .long 0x00000000, 0x0000F200    /* 0x30: User Data (64 version) */
 GDTEnd:

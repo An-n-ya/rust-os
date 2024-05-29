@@ -3,7 +3,7 @@
 ARCH ?= amd64
 
 ifeq ($(ARCH),amd64)
-    TRIPLE ?= x86_64-none-elf-
+    TRIPLE ?= x86_64-elf-
 else ifeq ($(ARCH),x86)
     TRIPLE ?= i686-elf-
 else
