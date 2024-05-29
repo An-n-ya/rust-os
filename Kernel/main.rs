@@ -15,6 +15,7 @@
 
 use core::str::from_raw_parts;
 
+use interrupts::{divide_by_zero, idt::init_idt};
 use vga::TerminalWriter;
 
 /// Macros, need to be loaded before everything else due to how rust parses
@@ -37,6 +38,8 @@ mod logging;
 
 /// vga
 mod vga;
+
+mod interrupts;
 
 #[repr(C, packed)]
 pub struct MultibootInfo {
@@ -93,7 +96,7 @@ pub unsafe extern "C" fn kmain(_multiboot_magic: u64, info: *const MultibootInfo
     let _multiboot_magic = _multiboot_magic as u32;
     assert_eq!(_multiboot_magic, 0x2BADB002);
     TerminalWriter::init();
-    // log!("Hello world! 1={}", 1);
+    init_idt();
     unsafe {
         let ptr = (*info).boot_loader_name;
         let name = from_raw_parts(ptr.add(KERNEL_BASE as usize), 4);
@@ -109,6 +112,9 @@ pub unsafe extern "C" fn kmain(_multiboot_magic: u64, info: *const MultibootInfo
         log!("name {}", name);
 
         println!("hello world!");
+
+        // *(0xDEADBEAF as *mut u64) = 100;
+        // divide_by_zero();
 
         for i in 0..mmap_length {
             let ptr = ((*info).mmap_addr as u64
