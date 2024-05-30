@@ -10,7 +10,7 @@
  * its use, and the author takes no liability.
  */
 
-use crate::backtrace::backtrace;
+use crate::{backtrace::backtrace, hlt};
 
 #[panic_handler]
 pub fn panic_implementation(info: &::core::panic::PanicInfo) -> ! {
@@ -31,7 +31,7 @@ pub fn panic_implementation(info: &::core::panic::PanicInfo) -> ! {
         log!("PANIC file='{}', line={} :: ?", file, line);
     }
     backtrace(rbp as *const u64);
-    loop {}
+    hlt();
 }
 
 #[allow(non_camel_case_types)]

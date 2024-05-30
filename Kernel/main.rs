@@ -108,7 +108,15 @@ pub unsafe extern "C" fn kmain(_multiboot_magic: u64, _info: *const MultibootInf
 
     // *(0xDEADBEAF as *mut u64) = 100;
     // divide_by_zero();
-    loop {}
+    hlt();
+}
+
+pub fn hlt() -> ! {
+    loop {
+        unsafe {
+            core::arch::asm!("hlt", options(nomem, nostack));
+        }
+    }
 }
 
 fn init() {
