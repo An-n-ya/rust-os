@@ -1,6 +1,8 @@
 use core::fmt;
 
-use super::handler::{divide_zero_handler, page_fault_handler};
+use super::handler::{
+    divide_zero_handler, double_fault_handler, page_fault_handler, timer_interrupt_handler,
+};
 
 /*
 |15         3|2  1|   0|
@@ -17,7 +19,7 @@ const USER_DATA_SELECTOR_64: u16 = (6 << 3) + (0 << 2) + 0;
 
 static mut IDT: Idt = Idt::new();
 
-pub struct Idt([Entry; 16]);
+pub struct Idt([Entry; 256]);
 #[repr(C, packed)]
 #[derive(Clone, Copy)]
 struct Entry {
@@ -61,7 +63,8 @@ impl fmt::Debug for ExceptionFrame {
     }
 }
 
-pub type HandlerFunc = extern "x86-interrupt" fn(_: ExceptionFrame) -> !;
+pub type HandlerFunc = extern "x86-interrupt" fn(_: ExceptionFrame);
+pub type HandlerFuncWithErr = extern "x86-interrupt" fn(_: ExceptionFrame, _: u64);
 
 impl EntryOptions {
     fn new() -> Self {
@@ -110,14 +113,13 @@ impl EntryOptions {
 }
 
 impl Entry {
-    pub fn new(handler: HandlerFunc) -> Self {
-        let handler = handler as u64;
+    pub fn new(handler_address: u64) -> Self {
         Entry {
-            pointer_low: handler as u16,
+            pointer_low: handler_address as u16,
             gdt_selector: KERNEL_CODE_SELECTOR,
             options: EntryOptions::new(),
-            pointer_middle: (handler >> 16) as u16,
-            pointer_high: (handler >> 32) as u32,
+            pointer_middle: (handler_address >> 16) as u16,
+            pointer_high: (handler_address >> 32) as u32,
             reserved: 0,
         }
     }
@@ -136,10 +138,13 @@ impl Entry {
 
 impl Idt {
     const fn new() -> Self {
-        Self([Entry::default(); 16])
+        Self([Entry::default(); 256])
+    }
+    pub fn set_handler_with_errorcode(&mut self, entry: usize, handler: HandlerFuncWithErr) {
+        self.0[entry] = Entry::new(handler as u64);
     }
     pub fn set_handler(&mut self, entry: usize, handler: HandlerFunc) {
-        self.0[entry] = Entry::new(handler);
+        self.0[entry] = Entry::new(handler as u64);
     }
     pub fn load(&self) {
         #[derive(Debug)]
@@ -162,6 +167,8 @@ pub fn init_idt() {
     unsafe {
         IDT.set_handler(14, page_fault_handler);
         IDT.set_handler(0, divide_zero_handler);
+        IDT.set_handler_with_errorcode(8, double_fault_handler);
+        IDT.set_handler(0x20, timer_interrupt_handler);
         IDT.load();
     }
 }

@@ -46,6 +46,8 @@ mod interrupts;
 
 mod backtrace;
 
+mod port;
+
 #[repr(C, packed)]
 pub struct MultibootInfo {
     /* Multiboot info version number */
@@ -106,13 +108,13 @@ pub unsafe extern "C" fn kmain(_multiboot_magic: u64, _info: *const MultibootInf
     // print_boot_info(_info);
 
     // *(0xDEADBEAF as *mut u64) = 100;
-    divide_by_zero();
+    // divide_by_zero();
     loop {}
 }
 
 fn init() {
     TerminalWriter::init();
-    init_idt();
+    interrupts::init();
 }
 
 #[allow(dead_code)]
