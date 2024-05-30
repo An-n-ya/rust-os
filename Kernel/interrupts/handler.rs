@@ -1,3 +1,5 @@
+use core::panic;
+
 use super::idt::ExceptionFrame;
 
 pub extern "x86-interrupt" fn page_fault_handler(frame: ExceptionFrame) -> ! {

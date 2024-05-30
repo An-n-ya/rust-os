@@ -44,6 +44,8 @@ mod vga;
 
 mod interrupts;
 
+mod backtrace;
+
 #[repr(C, packed)]
 pub struct MultibootInfo {
     /* Multiboot info version number */

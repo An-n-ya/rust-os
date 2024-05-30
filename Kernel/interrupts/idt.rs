@@ -34,11 +34,11 @@ struct EntryOptions(u16);
 
 #[repr(C)]
 pub struct ExceptionFrame {
-    instruction_pointer: u64,
-    code_segment: u64,
-    cpu_flags: u64,
-    stack_pointer: u64,
-    stack_segment: u64,
+    pub instruction_pointer: u64,
+    pub code_segment: u64,
+    pub cpu_flags: u64,
+    pub stack_pointer: u64,
+    pub stack_segment: u64,
 }
 
 impl fmt::Debug for ExceptionFrame {
