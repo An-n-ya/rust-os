@@ -1,3 +1,5 @@
+use core::fmt;
+
 use super::handler::{divide_zero_handler, page_fault_handler};
 
 /*
@@ -30,7 +32,36 @@ struct Entry {
 #[derive(Clone, Copy)]
 struct EntryOptions(u16);
 
-pub type HandlerFunc = extern "C" fn() -> !;
+#[repr(C)]
+pub struct ExceptionFrame {
+    instruction_pointer: u64,
+    code_segment: u64,
+    cpu_flags: u64,
+    stack_pointer: u64,
+    stack_segment: u64,
+}
+
+impl fmt::Debug for ExceptionFrame {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{{
+    instruction_pointer: {:#X},
+    code_segment: {:#X},
+    cpu_flags: {:#X},
+    stack_pointer: {:#X},
+    stack_segment: {:#X},
+}}",
+            self.instruction_pointer,
+            self.code_segment,
+            self.cpu_flags,
+            self.stack_pointer,
+            self.stack_segment
+        )
+    }
+}
+
+pub type HandlerFunc = extern "x86-interrupt" fn(_: ExceptionFrame) -> !;
 
 impl EntryOptions {
     fn new() -> Self {

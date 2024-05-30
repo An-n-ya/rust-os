@@ -9,7 +9,8 @@
  * its use, and the author takes no liability.
  */
 #![feature(panic_info_message)] //< Panic handling
-#![feature(str_from_raw_parts)] //< Panic handling
+#![feature(str_from_raw_parts)]
+#![feature(abi_x86_interrupt)]
 #![no_std] //< Kernels can't use std
 #![crate_name = "kernel"]
 
@@ -103,7 +104,7 @@ pub unsafe extern "C" fn kmain(_multiboot_magic: u64, _info: *const MultibootInf
     // print_boot_info(_info);
 
     // *(0xDEADBEAF as *mut u64) = 100;
-    // divide_by_zero();
+    divide_by_zero();
     loop {}
 }
 
