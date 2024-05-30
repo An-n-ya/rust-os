@@ -18,7 +18,6 @@ use core::str::from_raw_parts;
 
 #[allow(unused_imports)]
 use interrupts::divide_by_zero;
-use interrupts::idt::init_idt;
 use vga::TerminalWriter;
 
 /// Macros, need to be loaded before everything else due to how rust parses

@@ -26,13 +26,16 @@ macro_rules! print {
         #[allow(unused_unsafe)]
         unsafe {
             use $crate::vga::TerminalWriter;
+            use $crate::interrupts;
             use core::fmt::Write as FmtWrite;
-            let writer = &$crate::vga::TERMINAL_WRITER as *const TerminalWriter;
-            // write_fmt needs writer as &mut, but we only access it as *const. Cast to fulfil the
-            // API requirements
-            let writer = writer as *mut TerminalWriter;
-            #[allow(invalid_reference_casting)]
-            write!(&mut *(writer), $($arg)*).expect("Failed to print")
+            interrupts::run_without_interrupt(|| {
+                let writer = &$crate::vga::TERMINAL_WRITER as *const TerminalWriter;
+                // write_fmt needs writer as &mut, but we only access it as *const. Cast to fulfil the
+                // API requirements
+                let writer = writer as *mut TerminalWriter;
+                #[allow(invalid_reference_casting)]
+                write!(&mut *(writer), $($arg)*).expect("Failed to print");
+            });
         }
     }
 }

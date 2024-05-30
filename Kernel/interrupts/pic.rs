@@ -26,6 +26,7 @@ impl PicController {
     }
 
     pub fn init(&self) {
+        // refer to https://wiki.osdev.org/8259_PIC
         // init master
         self.master.control.write_u8(0x11); // ICW1
         self.master.data.write_u8(0x20); // ICW2

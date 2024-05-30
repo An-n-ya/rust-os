@@ -90,6 +90,9 @@ impl TerminalWriter {
         let color = self.terminal_color.load(Ordering::Relaxed);
         // Increment col as we always try to advance the cursor after we write
         let pos = self.terminal_pos.fetch_add(1, Ordering::Relaxed);
+        let pos = (pos + 1) % (VGA_HEIGHT * VGA_WIDTH);
+        self.terminal_pos.store(pos, Ordering::Relaxed);
+        // self.terminal_pos.store(pos, Ordering::Relaxed);
         unsafe {
             *self.terminal_buffer.add(pos) = vga_entry(c, color);
         }
