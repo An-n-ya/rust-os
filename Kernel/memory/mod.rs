@@ -1,7 +1,12 @@
+use self::frame::PageSize;
+
+use self::frame::Allocator;
+
 use self::page_table::PageTable;
 
-use crate::KERNEL_BASE;
+use crate::{MultibootInfo, KERNEL_BASE};
 
+mod frame;
 mod page_table;
 
 pub fn read_page() {
@@ -27,13 +32,13 @@ pub fn read_page() {
         }
     }
 
-    let virt_addr = KERNEL_BASE + 0xb8000;
-    let physical_addr = virt_to_physical(virt_addr);
-    log!(
-        "virt_addr {:#X} -> physical_addr {:#x}",
-        virt_addr,
-        physical_addr
-    );
+    // let virt_addr = KERNEL_BASE + 0xb8000;
+    // let physical_addr = virt_to_physical(virt_addr);
+    // log!(
+    //     "virt_addr {:#X} -> physical_addr {:#x}",
+    //     virt_addr,
+    //     physical_addr
+    // );
 }
 
 pub fn virt_to_physical(virt_addr: u64) -> u64 {
@@ -41,7 +46,6 @@ pub fn virt_to_physical(virt_addr: u64) -> u64 {
     unsafe {
         core::arch::asm!("mov {}, cr3", out(reg) cr3, options(nomem, nostack, preserves_flags));
     }
-    log!("cr3: {cr3:#X}");
     let pml4 = cr3 + KERNEL_BASE;
     let mut table = pml4 as *const PageTable;
     let page_index = [
@@ -67,9 +71,20 @@ pub fn virt_to_physical(virt_addr: u64) -> u64 {
 
 pub fn map_page(virt_addr: u64, phy_addr: u64) {
     let page_index = [
-        virt_addr & 0o777 << 39,
-        virt_addr & 0o777 << 30,
-        virt_addr & 0o777 << 21,
-        virt_addr & 0o777 << 12,
+        (virt_addr & 0o777 << 39) >> 39,
+        (virt_addr & 0o777 << 30) >> 30,
+        (virt_addr & 0o777 << 21) >> 21,
+        (virt_addr & 0o777 << 12) >> 12,
     ];
+}
+
+pub fn test_allocator(info: *const MultibootInfo, kernel_range: (u64, u64)) {
+    let mut allocator = Allocator::new(info, kernel_range);
+    let f = allocator.new_frame();
+    assert!(f.size == PageSize::Small);
+    assert!(
+        f.addr == (kernel_range.1 & 0xffff_f000) + 0x1000,
+        "wrong address allocation addr: {:#X}",
+        f.addr
+    );
 }

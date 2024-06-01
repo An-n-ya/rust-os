@@ -18,7 +18,7 @@ use core::str::from_raw_parts;
 
 #[allow(unused_imports)]
 use interrupts::divide_by_zero;
-use memory::read_page;
+use memory::{read_page, test_allocator, virt_to_physical};
 use vga::TerminalWriter;
 
 /// Macros, need to be loaded before everything else due to how rust parses
@@ -49,6 +49,13 @@ mod backtrace;
 mod port;
 
 mod memory;
+
+pub const KERNEL_BASE: u64 = 0xFFFFFFFF80000000;
+
+extern "C" {
+    static kernel_end: u8;
+    static kernel_start: u8;
+}
 
 #[repr(C, packed)]
 pub struct MultibootInfo {
@@ -97,8 +104,6 @@ struct MultibootMmapEntry {
     typ: u32,
 }
 
-pub const KERNEL_BASE: u64 = 0xFFFFFFFF80000000;
-
 // Kernel entrypoint (called by arch/<foo>/start.S)
 #[no_mangle]
 pub unsafe extern "C" fn kmain(_multiboot_magic: u64, _info: *const MultibootInfo) -> ! {
@@ -107,12 +112,19 @@ pub unsafe extern "C" fn kmain(_multiboot_magic: u64, _info: *const MultibootInf
     init();
     println!("hello world!");
 
-    // print_boot_info(_info);
-
     // *(0xDEADBEAF as *mut u64) = 100;
     // divide_by_zero();
 
     read_page();
+
+    let end_addr = &kernel_end as *const u8 as u64;
+    let start_addr = &kernel_start as *const u8 as u64;
+    let start_addr = virt_to_physical(start_addr);
+    let end_addr = virt_to_physical(end_addr);
+    log!("kernel start: {:#X}", start_addr);
+    log!("kernel end: {:#X}", end_addr);
+    test_allocator(_info, (start_addr, end_addr));
+    // print_boot_info(_info);
     hlt();
 }
 
