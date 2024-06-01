@@ -185,7 +185,7 @@ init_pml4:
 	.rept 512 - 3
 		.quad 0
 	.endr
-	.quad 0 	/* If you so wish, this is a good place for the "Fractal" mapping */
+	.quad init_pml4 - KERNEL_BASE + 3 	/* If you so wish, this is a good place for the "Fractal" mapping */
 	.quad init_pdpt - KERNEL_BASE + 3	/* Final mapping */
 low_pdpt:
 	.quad init_pd - KERNEL_BASE + 3	/* early init identity map */

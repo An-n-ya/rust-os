@@ -18,6 +18,7 @@ use core::str::from_raw_parts;
 
 #[allow(unused_imports)]
 use interrupts::divide_by_zero;
+use memory::read_page;
 use vga::TerminalWriter;
 
 /// Macros, need to be loaded before everything else due to how rust parses
@@ -46,6 +47,8 @@ mod interrupts;
 mod backtrace;
 
 mod port;
+
+mod memory;
 
 #[repr(C, packed)]
 pub struct MultibootInfo {
@@ -108,6 +111,8 @@ pub unsafe extern "C" fn kmain(_multiboot_magic: u64, _info: *const MultibootInf
 
     // *(0xDEADBEAF as *mut u64) = 100;
     // divide_by_zero();
+
+    read_page();
     hlt();
 }
 
