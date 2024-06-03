@@ -124,7 +124,7 @@ pub unsafe extern "C" fn kmain(_multiboot_magic: u64, _info: *const MultibootInf
     log!("kernel start: {:#X}", start_addr);
     log!("kernel end: {:#X}", end_addr);
     test_allocator(_info, (start_addr, end_addr));
-    // print_boot_info(_info);
+    print_boot_info(_info);
     hlt();
 }
 

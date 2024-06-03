@@ -47,7 +47,7 @@ start:
 	/* 1. Save multiboot state */
 	mov %eax, mboot_sig - KERNEL_BASE
 	mov %ebx, mboot_ptr - KERNEL_BASE
-	
+
 	/* 2. Ensure that the CPU support long mode */
 	mov $0x80000000, %eax
 	cpuid

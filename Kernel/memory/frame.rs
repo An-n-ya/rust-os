@@ -1,4 +1,4 @@
-use crate::{MultibootInfo, MultibootMmapEntry, KERNEL_BASE};
+use crate::{MultibootInfo, KERNEL_BASE};
 
 #[derive(PartialEq, Eq)]
 pub struct Frame {
@@ -40,6 +40,13 @@ struct AreaIterator {
     addr: u64,
     cur: usize,
     length: usize,
+}
+
+impl Frame {
+    // not included
+    pub fn end_addr(&self) -> u64 {
+        self.addr + self.size as u64 - 1
+    }
 }
 
 impl Iterator for AreaIterator {
@@ -109,6 +116,17 @@ impl Allocator {
     }
     fn in_multiboot(&self, start: u64, end: u64) -> bool {
         !(end < self.multiboot_start || start > self.multiboot_end)
+    }
+}
+
+impl FrameAllocator for Allocator {
+    fn allocate_frame(&mut self) -> Option<Frame> {
+        Some(self.new_frame())
+    }
+
+    fn deallocate_frame(&mut self, frame: Frame) {
+        // TODO
+        // todo!()
     }
 }
 
