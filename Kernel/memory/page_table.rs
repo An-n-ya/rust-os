@@ -3,9 +3,15 @@ use core::{
     ops::{Index, IndexMut},
 };
 
-use super::frame::FrameAllocator;
+use super::frame::{FrameAllocator, PageSize};
 
 pub const P4: *mut PageTable<Level4> = 0o177777_776_776_776_776_0000 as *mut _;
+
+#[derive(PartialEq, Eq, Clone, Copy)]
+pub struct Page {
+    pub addr: u64,
+    pub size: PageSize,
+}
 
 #[repr(C)]
 pub struct PageTableEntry(u64);
@@ -172,6 +178,57 @@ where
             self.next_table_mut(index).unwrap().reset();
         }
         self.next_table_mut(index).unwrap()
+    }
+}
+
+impl Page {
+    pub fn new_small_page(addr: u64) -> Self {
+        Self {
+            addr,
+            size: PageSize::Small,
+        }
+    }
+
+    pub fn p4_index(&self) -> usize {
+        ((self.addr >> 39) & 0o777) as usize
+    }
+    pub fn p3_index(&self) -> usize {
+        ((self.addr >> 30) & 0o777) as usize
+    }
+    pub fn p2_index(&self) -> usize {
+        ((self.addr >> 21) & 0o777) as usize
+    }
+    pub fn p1_index(&self) -> usize {
+        ((self.addr >> 12) & 0o777) as usize
+    }
+
+    pub fn range_inclusive(start: Page, end: Page) -> PageIter {
+        PageIter { start, end }
+    }
+}
+
+impl PartialOrd for Page {
+    fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
+        self.addr.partial_cmp(&other.addr)
+    }
+}
+
+pub struct PageIter {
+    start: Page,
+    end: Page,
+}
+
+impl Iterator for PageIter {
+    type Item = Page;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.start <= self.end {
+            let res = self.start;
+            self.start.addr += self.start.size as u64;
+            Some(res)
+        } else {
+            None
+        }
     }
 }
 

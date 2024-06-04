@@ -11,6 +11,7 @@
 #![feature(panic_info_message)] //< Panic handling
 #![feature(str_from_raw_parts)]
 #![feature(abi_x86_interrupt)]
+#![feature(allocator_api)]
 #![no_std] //< Kernels can't use std
 #![crate_name = "kernel"]
 
@@ -18,7 +19,7 @@ use core::str::from_raw_parts;
 
 #[allow(unused_imports)]
 use interrupts::divide_by_zero;
-use memory::{frame::Allocator, read_page, test_allocator, test_map, virt_to_physical};
+use memory::{frame::Allocator, read_page, virt_to_physical};
 use vga::TerminalWriter;
 
 /// Macros, need to be loaded before everything else due to how rust parses
@@ -56,6 +57,8 @@ extern "C" {
     static kernel_end: u8;
     static kernel_start: u8;
 }
+
+extern crate alloc;
 
 #[repr(C, packed)]
 pub struct MultibootInfo {
@@ -124,9 +127,11 @@ pub unsafe extern "C" fn kmain(_multiboot_magic: u64, _info: *const MultibootInf
     log!("kernel start: {:#X}", start_addr);
     log!("kernel end: {:#X}", end_addr);
     let mut allocator = Allocator::new(_info, (start_addr, end_addr));
-    test_allocator(_info, (start_addr, end_addr));
-    test_map(&mut allocator);
-    print_boot_info(_info);
+    memory::init(&mut allocator);
+
+    // test_allocator(_info, (start_addr, end_addr));
+    // test_map(&mut allocator);
+    // print_boot_info(_info);
     hlt();
 }
 

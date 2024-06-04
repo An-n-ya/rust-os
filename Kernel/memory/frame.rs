@@ -124,7 +124,7 @@ impl FrameAllocator for Allocator {
         Some(self.new_frame())
     }
 
-    fn deallocate_frame(&mut self, frame: Frame) {
+    fn deallocate_frame(&mut self, _frame: Frame) {
         // TODO
         // todo!()
     }

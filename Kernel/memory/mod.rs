@@ -1,3 +1,8 @@
+use self::heap_allocator::HEAP_SIZE;
+use self::heap_allocator::HEAP_START;
+
+use self::page_table::Page;
+
 use self::page_table::flush_page_table;
 
 use self::frame::Frame;
@@ -18,7 +23,21 @@ use self::page_table::PageTable;
 use crate::{MultibootInfo, KERNEL_BASE};
 
 pub mod frame;
+pub mod heap_allocator;
 mod page_table;
+
+pub fn init<A>(allocator: &mut A)
+where
+    A: FrameAllocator,
+{
+    // map heap
+    let heap_start_page = Page::new_small_page(HEAP_START as u64);
+    let heap_end_page = Page::new_small_page((HEAP_START + HEAP_SIZE) as u64);
+
+    for page in Page::range_inclusive(heap_start_page, heap_end_page) {
+        map(page, allocator.allocate_frame().unwrap(), allocator).set_writable(true);
+    }
+}
 
 pub fn read_page() {
     let cr3: u64;
@@ -89,26 +108,21 @@ pub fn virt_to_physical(virt_addr: u64) -> u64 {
     unreachable!()
 }
 
-pub fn map<A>(virt_addr: u64, frame: Frame, allocator: &mut A) -> &mut PageTableEntry
+pub fn map<A>(page: Page, frame: Frame, allocator: &mut A) -> &mut PageTableEntry
 where
     A: FrameAllocator,
 {
-    let page_index = [
-        (virt_addr & 0o777 << 39) >> 39,
-        (virt_addr & 0o777 << 30) >> 30,
-        (virt_addr & 0o777 << 21) >> 21,
-        (virt_addr & 0o777 << 12) >> 12,
-    ];
-
+    assert!(
+        page.size == PageSize::Small,
+        "UNIMPLEMENTED: only 4kb mapping is support currently"
+    );
     let p4 = unsafe { &mut *P4 };
-    let p3 = p4.next_table_create(page_index[0] as usize, allocator);
-    let p2 = p3.next_table_create(page_index[1] as usize, allocator);
-    let p1 = p2.next_table_create(page_index[2] as usize, allocator);
+    let p3 = p4.next_table_create(page.p4_index(), allocator);
+    let p2 = p3.next_table_create(page.p3_index(), allocator);
+    let p1 = p2.next_table_create(page.p2_index(), allocator);
 
-    assert!(p1[page_index[3] as usize].is_unused());
-    let entry = p1[page_index[3] as usize]
-        .set_addr(frame.addr)
-        .set_present(true);
+    assert!(p1[page.p1_index()].is_unused());
+    let entry = p1[page.p1_index()].set_addr(frame.addr).set_present(true);
 
     flush_page_table();
 
@@ -165,7 +179,7 @@ where
     let virt_addr = 0xffff_0000;
     let frame = allocator.allocate_frame().expect("no more frames");
     let physical_addr = frame.addr;
-    map(virt_addr, frame, allocator).set_writable(true);
+    map(Page::new_small_page(virt_addr), frame, allocator).set_writable(true);
     log!("map virt addr {:#X} to {:#X}", virt_addr, physical_addr);
 
     let a = virt_addr as *mut u64;
