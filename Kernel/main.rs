@@ -18,7 +18,7 @@ use core::str::from_raw_parts;
 
 #[allow(unused_imports)]
 use interrupts::divide_by_zero;
-use memory::{read_page, test_allocator, virt_to_physical};
+use memory::{frame::Allocator, read_page, test_allocator, test_map, virt_to_physical};
 use vga::TerminalWriter;
 
 /// Macros, need to be loaded before everything else due to how rust parses
@@ -123,7 +123,9 @@ pub unsafe extern "C" fn kmain(_multiboot_magic: u64, _info: *const MultibootInf
     let end_addr = virt_to_physical(end_addr);
     log!("kernel start: {:#X}", start_addr);
     log!("kernel end: {:#X}", end_addr);
+    let mut allocator = Allocator::new(_info, (start_addr, end_addr));
     test_allocator(_info, (start_addr, end_addr));
+    test_map(&mut allocator);
     print_boot_info(_info);
     hlt();
 }

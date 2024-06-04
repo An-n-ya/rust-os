@@ -1,3 +1,5 @@
+use self::page_table::flush_page_table;
+
 use self::frame::Frame;
 use self::frame::FrameAllocator;
 use self::page_table::PageTableEntry;
@@ -15,7 +17,7 @@ use self::page_table::PageTable;
 
 use crate::{MultibootInfo, KERNEL_BASE};
 
-mod frame;
+pub mod frame;
 mod page_table;
 
 pub fn read_page() {
@@ -104,9 +106,13 @@ where
     let p1 = p2.next_table_create(page_index[2] as usize, allocator);
 
     assert!(p1[page_index[3] as usize].is_unused());
-    p1[page_index[3] as usize]
+    let entry = p1[page_index[3] as usize]
         .set_addr(frame.addr)
-        .set_present(true)
+        .set_present(true);
+
+    flush_page_table();
+
+    entry
 }
 
 pub fn unmap<A>(virt_addr: u64, allocator: &mut A)
@@ -135,7 +141,10 @@ where
     };
     // TODO: clear p2 p3 p4 if they are empty
     p1[page_index[3] as usize].set_unused();
+
     allocator.deallocate_frame(frame);
+
+    flush_page_table();
 }
 
 pub fn test_allocator(info: *const MultibootInfo, kernel_range: (u64, u64)) {
@@ -147,4 +156,27 @@ pub fn test_allocator(info: *const MultibootInfo, kernel_range: (u64, u64)) {
         "wrong address allocation addr: {:#X}",
         f.addr
     );
+}
+
+pub fn test_map<A>(allocator: &mut A)
+where
+    A: FrameAllocator,
+{
+    let virt_addr = 0xffff_0000;
+    let frame = allocator.allocate_frame().expect("no more frames");
+    let physical_addr = frame.addr;
+    map(virt_addr, frame, allocator).set_writable(true);
+    log!("map virt addr {:#X} to {:#X}", virt_addr, physical_addr);
+
+    let a = virt_addr as *mut u64;
+    log!("a value {:#X}", unsafe { *a });
+    unsafe {
+        *a = 1;
+    }
+    log!("a value {:#X}", unsafe { *a });
+
+    // unmap(virt_addr, allocator);
+    // log!("hello");
+    // FIXME: expect page fault, but got stuck
+    // log!("a value {:#X}", unsafe { *a });
 }

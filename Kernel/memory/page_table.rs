@@ -128,7 +128,7 @@ where
         if self[index].is_present() && !self[index].is_huge() {
             let table_address = self as *const _ as u64;
             let index = index as u64;
-            Some((table_address << 9) | (index << 12))
+            Some((table_address << 9) | (index << 12) | (1 << 48))
         } else {
             None
         }
@@ -172,5 +172,13 @@ where
             self.next_table_mut(index).unwrap().reset();
         }
         self.next_table_mut(index).unwrap()
+    }
+}
+
+pub fn flush_page_table() {
+    let mut cr3: u64;
+    unsafe {
+        core::arch::asm!("mov {}, cr3", out(reg) cr3, options(nomem, nostack, preserves_flags));
+        core::arch::asm!("mov cr3, {}", in(reg) cr3, options(nomem, nostack, preserves_flags));
     }
 }
