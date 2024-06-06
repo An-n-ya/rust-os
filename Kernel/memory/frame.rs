@@ -47,6 +47,12 @@ impl Frame {
     pub fn end_addr(&self) -> u64 {
         self.addr + self.size as u64 - 1
     }
+    pub fn new_small_page(addr: u64) -> Self {
+        Self {
+            addr,
+            size: PageSize::Small,
+        }
+    }
 }
 
 impl Iterator for AreaIterator {

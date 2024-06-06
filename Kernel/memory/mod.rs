@@ -24,7 +24,7 @@ use crate::{MultibootInfo, KERNEL_BASE};
 
 pub mod frame;
 pub mod heap_allocator;
-mod page_table;
+pub mod page_table;
 
 pub fn init<A>(allocator: &mut A)
 where

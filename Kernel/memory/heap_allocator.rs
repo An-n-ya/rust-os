@@ -29,7 +29,8 @@ unsafe impl GlobalAlloc for HeapAllocator {
     unsafe fn alloc(&self, layout: core::alloc::Layout) -> *mut u8 {
         loop {
             // load current state of the `next` field
-            let current_next = self.next.load(Ordering::Relaxed);
+            // FIXME: the mutex operation seems to be wrong
+            let current_next = self.next.load(Ordering::Acquire);
             let alloc_start = align_up(current_next, layout.align());
             let alloc_end = alloc_start.saturating_add(layout.size());
 

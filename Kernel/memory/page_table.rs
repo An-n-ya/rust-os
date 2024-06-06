@@ -1,9 +1,13 @@
 use core::{
     marker::PhantomData,
+    mem::transmute_copy,
     ops::{Index, IndexMut},
 };
 
-use super::frame::{FrameAllocator, PageSize};
+use super::{
+    frame::{Frame, FrameAllocator, PageSize},
+    virt_to_physical,
+};
 
 pub const P4: *mut PageTable<Level4> = 0o177777_776_776_776_776_0000 as *mut _;
 
@@ -13,6 +17,7 @@ pub struct Page {
     pub size: PageSize,
 }
 
+#[derive(Clone, Copy)]
 #[repr(C)]
 pub struct PageTableEntry(u64);
 
@@ -23,6 +28,7 @@ pub struct PageTable<L: TableLevel> {
 }
 
 pub trait TableLevel {}
+pub trait MappingTable: HierarchicalLevel {}
 pub trait HierarchicalLevel: TableLevel {
     type NextLevel: TableLevel;
 }
@@ -43,6 +49,7 @@ impl HierarchicalLevel for Level3 {
 impl HierarchicalLevel for Level2 {
     type NextLevel = Level1;
 }
+impl MappingTable for Level4 {}
 
 impl PageTableEntry {
     pub fn is_unused(&self) -> bool {
@@ -66,6 +73,14 @@ impl PageTableEntry {
     }
     pub fn is_present(&self) -> bool {
         self.0 & 1 != 0
+    }
+    pub fn set_user(&mut self, flag: bool) -> &mut Self {
+        if flag {
+            self.0 |= 1 << 2;
+        } else {
+            self.0 &= !(1 << 2);
+        }
+        self
     }
     pub fn set_present(&mut self, flag: bool) -> &mut Self {
         if flag {
@@ -142,8 +157,52 @@ where
 }
 impl<L> PageTable<L>
 where
+    L: MappingTable,
+{
+    // pub fn map<A>(&mut self, page: Page, frame: Frame, allocator: &mut A) -> &mut PageTableEntry
+    // where
+    //     A: FrameAllocator,
+    // {
+    //     assert!(
+    //         page.size == PageSize::Small,
+    //         "UNIMPLEMENTED: only 4kb mapping is support currently"
+    //     );
+    //     let p4 = unsafe { transmute_copy::<PageTable<L>, &mut PageTable<Level4>>(self) };
+    //     let p3 = p4.next_table_create(page.p4_index(), allocator);
+    //     let p2 = p3.next_table_create(page.p3_index(), allocator);
+    //     let p1 = p2.next_table_create(page.p2_index(), allocator);
+
+    //     assert!(p1[page.p1_index()].is_unused());
+    //     let entry = p1[page.p1_index()].set_addr(frame.addr).set_present(true);
+
+    //     flush_page_table();
+
+    //     entry
+    // }
+
+    pub fn enable(&self) {
+        let virt_addr = self as *const _ as u64;
+        let phys_addr = virt_to_physical(virt_addr);
+        unsafe {
+            core::arch::asm!("mov {}, cr3", in(reg) phys_addr, options(nomem, nostack));
+        }
+    }
+}
+impl<L> PageTable<L>
+where
     L: HierarchicalLevel,
 {
+    pub fn kernel_page_table() -> Self {
+        let p4 = unsafe { &*P4 };
+        let mut entries = [PageTableEntry(0); 512];
+        entries[510] = p4.entries[510].clone();
+        entries[511] = p4.entries[511].clone();
+        PageTable {
+            entries,
+            level: PhantomData,
+        }
+    }
+
     pub fn next_table_is_huge(&self, index: usize) -> bool {
         assert!(index < 512);
         self[index].is_huge()

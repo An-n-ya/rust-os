@@ -20,6 +20,7 @@ use core::str::from_raw_parts;
 #[allow(unused_imports)]
 use interrupts::divide_by_zero;
 use memory::{frame::Allocator, read_page, virt_to_physical};
+use proc::test_user_space;
 use vga::TerminalWriter;
 
 /// Macros, need to be loaded before everything else due to how rust parses
@@ -50,6 +51,8 @@ mod backtrace;
 mod port;
 
 mod memory;
+
+mod proc;
 
 pub const KERNEL_BASE: u64 = 0xFFFFFFFF80000000;
 
@@ -128,6 +131,8 @@ pub unsafe extern "C" fn kmain(_multiboot_magic: u64, _info: *const MultibootInf
     log!("kernel end: {:#X}", end_addr);
     let mut allocator = Allocator::new(_info, (start_addr, end_addr));
     memory::init(&mut allocator);
+
+    // test_user_space(&mut allocator);
 
     // test_allocator(_info, (start_addr, end_addr));
     // test_map(&mut allocator);

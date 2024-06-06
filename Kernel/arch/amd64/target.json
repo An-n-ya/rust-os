@@ -6,9 +6,10 @@
 	"target-pointer-width": "64",
 	"target-c-int-width": "32",
 	"features": "-mmx,-sse,+soft-float",
-	"os": "tifflin",
+	"os": "none",
 	"arch": "x86_64",
-		"linker-flavor": "ld",
-		"pre-link-args": { "ld": ["-m64"] },
-		"disable-redzone": true
+    "linker-flavor": "ld.lld",
+    "linker": "rust-lld",
+    "pre-link-args": { "ld": ["-m64"] },
+    "disable-redzone": true
 }
