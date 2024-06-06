@@ -5,7 +5,7 @@ use crate::{
     memory::{
         frame::{Frame, FrameAllocator},
         map,
-        page_table::{Level4, Page, PageTable},
+        page_table::{kernel_page_table, Page},
         virt_to_physical,
     },
 };
@@ -14,6 +14,7 @@ const MSR_STAR: u64 = 0xC000_0081;
 const MSR_IA32_EFER: u64 = 0xC000_0081;
 const MSR_STAR_VALUE: u64 = 0x23_0008_0000_0000;
 
+#[no_mangle]
 pub unsafe fn user_space_prog_1() {
     core::arch::asm!(
         "
@@ -25,12 +26,12 @@ pub unsafe fn user_space_prog_1() {
     );
 }
 
-#[no_mangle]
 pub fn test_user_space<A>(allocator: &mut A)
 where
     A: FrameAllocator,
 {
     let user_space_fn_in_kernel = user_space_prog_1 as *const () as u64;
+    log!("fn addr {:#X}", user_space_fn_in_kernel);
     let user_space_fn_phys = virt_to_physical(user_space_fn_in_kernel);
     let page_phys_start = (user_space_fn_phys >> 12) << 12;
     let fn_page_offset = user_space_fn_phys - page_phys_start;
@@ -42,7 +43,7 @@ where
         user_space_fn_virt_base,
         fn_page_offset
     );
-    let table: PageTable<Level4> = PageTable::kernel_page_table();
+    let table = unsafe { &*kernel_page_table() };
     table.enable();
     let user_space_page = Page::new_small_page(user_space_fn_virt_base);
     let phys_frame = Frame::new_small_page(page_phys_start);
@@ -75,6 +76,7 @@ fn init_syscalls() {
 pub fn jump_to_user_mode(code: u64, stack_end: u64) {
     let cs_sel = (5 << 3) | 3;
     let ds_sel = (6 << 3) | 3;
+    loop {}
     unsafe {
         core::arch::asm!(
             "

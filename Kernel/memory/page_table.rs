@@ -17,8 +17,8 @@ pub struct Page {
     pub size: PageSize,
 }
 
-#[derive(Clone, Copy)]
-#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+#[repr(transparent)]
 pub struct PageTableEntry(u64);
 
 #[repr(C, align(4096))]
@@ -188,21 +188,26 @@ where
         }
     }
 }
+unsafe fn alloc_page_table() -> *mut PageTable<Level4> {
+    static mut TABLE: PageTable<Level4> = PageTable {
+        entries: [PageTableEntry(0); 512],
+        level: PhantomData,
+    };
+    &mut TABLE as *mut PageTable<Level4>
+}
+pub fn kernel_page_table() -> *mut PageTable<Level4> {
+    let p4 = unsafe { &*P4 };
+    let new_p4 = unsafe { alloc_page_table() };
+    let p = unsafe { &mut *new_p4 };
+    p.entries[510] = p4.entries[510];
+    p.entries[511] = p4.entries[511];
+
+    new_p4
+}
 impl<L> PageTable<L>
 where
     L: HierarchicalLevel,
 {
-    pub fn kernel_page_table() -> Self {
-        let p4 = unsafe { &*P4 };
-        let mut entries = [PageTableEntry(0); 512];
-        entries[510] = p4.entries[510].clone();
-        entries[511] = p4.entries[511].clone();
-        PageTable {
-            entries,
-            level: PhantomData,
-        }
-    }
-
     pub fn next_table_is_huge(&self, index: usize) -> bool {
         assert!(index < 512);
         self[index].is_huge()

@@ -132,7 +132,7 @@ pub unsafe extern "C" fn kmain(_multiboot_magic: u64, _info: *const MultibootInf
     let mut allocator = Allocator::new(_info, (start_addr, end_addr));
     memory::init(&mut allocator);
 
-    // test_user_space(&mut allocator);
+    test_user_space(&mut allocator);
 
     // test_allocator(_info, (start_addr, end_addr));
     // test_map(&mut allocator);
