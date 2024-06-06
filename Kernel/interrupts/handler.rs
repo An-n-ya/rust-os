@@ -25,3 +25,8 @@ pub extern "x86-interrupt" fn timer_interrupt_handler(_frame: ExceptionFrame) {
     print!(".");
     PIC.eof(0x20);
 }
+pub extern "x86-interrupt" fn general_protection_fault_handler(frame: ExceptionFrame) {
+    log!("protection fault occur!");
+    log!("EXCEPTION MESSAGE: {frame:#?}");
+    hlt();
+}

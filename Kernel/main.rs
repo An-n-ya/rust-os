@@ -121,8 +121,6 @@ pub unsafe extern "C" fn kmain(_multiboot_magic: u64, _info: *const MultibootInf
     // *(0xDEADBEAF as *mut u64) = 100;
     // divide_by_zero();
 
-    read_page();
-
     let end_addr = &kernel_end as *const u8 as u64;
     let start_addr = &kernel_start as *const u8 as u64;
     let start_addr = virt_to_physical(start_addr);
@@ -131,6 +129,7 @@ pub unsafe extern "C" fn kmain(_multiboot_magic: u64, _info: *const MultibootInf
     log!("kernel end: {:#X}", end_addr);
     let mut allocator = Allocator::new(_info, (start_addr, end_addr));
     memory::init(&mut allocator);
+    read_page();
 
     test_user_space(&mut allocator);
 

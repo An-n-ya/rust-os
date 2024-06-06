@@ -1,7 +1,8 @@
 use core::fmt;
 
 use super::handler::{
-    divide_zero_handler, double_fault_handler, page_fault_handler, timer_interrupt_handler,
+    divide_zero_handler, double_fault_handler, general_protection_fault_handler,
+    page_fault_handler, timer_interrupt_handler,
 };
 
 /*
@@ -166,6 +167,7 @@ impl Idt {
 pub fn init_idt() {
     unsafe {
         IDT.set_handler(14, page_fault_handler);
+        IDT.set_handler(13, general_protection_fault_handler);
         IDT.set_handler(0, divide_zero_handler);
         IDT.set_handler_with_errorcode(8, double_fault_handler);
         IDT.set_handler(0x20, timer_interrupt_handler);

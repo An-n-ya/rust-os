@@ -6,7 +6,7 @@ use crate::{
         frame::{Frame, FrameAllocator},
         map,
         page_table::{kernel_page_table, Page},
-        virt_to_physical,
+        read_page, virt_to_physical,
     },
 };
 
@@ -43,6 +43,11 @@ where
         user_space_fn_virt_base,
         fn_page_offset
     );
+    let stack_space: Vec<u8> = Vec::with_capacity(0x1000);
+    let stack_space_phys = virt_to_physical(stack_space.as_ptr() as *const u8 as u64);
+    let stack_page = Page::new_small_page(0x80_0000);
+    let stack_phys_frame = Frame::new_small_page(stack_space_phys);
+
     let table = unsafe { &*kernel_page_table() };
     table.enable();
     let user_space_page = Page::new_small_page(user_space_fn_virt_base);
@@ -52,15 +57,13 @@ where
         .set_present(true)
         .set_user(true);
 
-    let stack_space: Vec<u8> = Vec::with_capacity(0x1000);
-    let stack_space_phys = virt_to_physical(stack_space.as_ptr() as *const u8 as u64);
-    let stack_page = Page::new_small_page(0x80_0000);
-    let stack_phys_frame = Frame::new_small_page(stack_space_phys);
-
     map(stack_page, stack_phys_frame, allocator)
         .set_present(true)
         .set_user(true);
 
+    // read_page();
+
+    init_syscalls();
     jump_to_user_mode(user_space_fn_virt, 0x80_1000);
 }
 
@@ -80,17 +83,17 @@ pub fn jump_to_user_mode(code: u64, stack_end: u64) {
     unsafe {
         core::arch::asm!(
             "
-            push {stack_seg:r}
-            push {stack}
+            push rax
+            push rsi
             push 0x200
-            push {code_seg:r}
-            push {ret_addr}
+            push rdx
+            push rdi
             iretq
         ",
-            ret_addr = in(reg) code,
-            stack = in(reg) stack_end,
-            stack_seg = in(reg) ds_sel,
-            code_seg = in(reg) cs_sel
+        in("rax") ds_sel,
+        in("rdx") cs_sel,
+        in("rsi") stack_end,
+        in("rdi") code,
         )
     }
 }

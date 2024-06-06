@@ -182,9 +182,11 @@ where
 
     pub fn enable(&self) {
         let virt_addr = self as *const _ as u64;
+        // log!("[table enable] virt_addr {:#X}", virt_addr);
         let phys_addr = virt_to_physical(virt_addr);
+        // log!("[table enable] phys_addr {:#X}", phys_addr);
         unsafe {
-            core::arch::asm!("mov {}, cr3", in(reg) phys_addr, options(nomem, nostack));
+            core::arch::asm!("mov cr3, {}", in(reg) phys_addr, options(nomem, nostack));
         }
     }
 }
