@@ -1,8 +1,10 @@
 use core::fmt;
 
 use super::handler::{
-    divide_zero_handler, double_fault_handler, general_protection_fault_handler,
-    page_fault_handler, timer_interrupt_handler,
+    bound_range_exceeded_interrupt, break_point_interrupt, divide_zero_handler,
+    double_fault_handler, general_protection_fault_handler, invalid_opcode_interrupt,
+    invalid_tss_interrupt, non_maskable_interrupt, overflow_interrupt, page_fault_handler,
+    segment_not_present_interrupt, stack_segment_fault_interrupt, timer_interrupt_handler,
 };
 
 /*
@@ -166,10 +168,18 @@ impl Idt {
 
 pub fn init_idt() {
     unsafe {
-        IDT.set_handler(14, page_fault_handler);
-        IDT.set_handler(13, general_protection_fault_handler);
-        IDT.set_handler(0, divide_zero_handler);
-        IDT.set_handler_with_errorcode(8, double_fault_handler);
+        IDT.set_handler(0x0, divide_zero_handler);
+        IDT.set_handler(0x2, non_maskable_interrupt);
+        IDT.set_handler(0x3, break_point_interrupt);
+        IDT.set_handler(0x4, overflow_interrupt);
+        IDT.set_handler(0x5, bound_range_exceeded_interrupt);
+        IDT.set_handler(0x6, invalid_opcode_interrupt);
+        IDT.set_handler_with_errorcode(0x08, double_fault_handler);
+        IDT.set_handler_with_errorcode(0x09, invalid_tss_interrupt);
+        IDT.set_handler_with_errorcode(0x0A, segment_not_present_interrupt);
+        IDT.set_handler_with_errorcode(0x0B, stack_segment_fault_interrupt);
+        IDT.set_handler_with_errorcode(0x0E, page_fault_handler);
+        IDT.set_handler_with_errorcode(0x0D, general_protection_fault_handler);
         IDT.set_handler(0x20, timer_interrupt_handler);
         IDT.load();
     }
