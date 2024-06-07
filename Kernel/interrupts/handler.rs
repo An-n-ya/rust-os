@@ -3,6 +3,11 @@ use crate::{hlt, interrupts::pic::PIC};
 use super::idt::ExceptionFrame;
 
 pub extern "x86-interrupt" fn page_fault_handler(frame: ExceptionFrame) {
+    let cr2: u64;
+    unsafe {
+        core::arch::asm!("mov {}, cr2", out(reg) cr2, options(nomem, nostack, preserves_flags));
+    }
+    log!("trying to access addr {:#X}", cr2);
     log!("page fault handler missing");
     log!("EXCEPTION MESSAGE: {frame:#?}");
     hlt();

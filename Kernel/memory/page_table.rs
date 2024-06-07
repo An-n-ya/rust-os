@@ -4,6 +4,8 @@ use core::{
     ops::{Index, IndexMut},
 };
 
+use alloc::string::{String, ToString};
+
 use super::{
     frame::{Frame, FrameAllocator, PageSize},
     virt_to_physical,
@@ -111,6 +113,21 @@ impl PageTableEntry {
             self.0 &= !(1 << 7);
         }
         self
+    }
+
+    pub fn printable_flag(&self) -> String {
+        let mut flags = "".to_string();
+        if self.is_writable() {
+            flags.push('w');
+        } else {
+            flags.push('-');
+        }
+        if self.is_present() {
+            flags.push('p');
+        } else {
+            flags.push('-');
+        }
+        flags
     }
 }
 
@@ -252,6 +269,13 @@ impl Page {
         Self {
             addr,
             size: PageSize::Small,
+        }
+    }
+
+    pub fn offset(&self, offset: u64) -> Self {
+        Self {
+            addr: self.addr + offset,
+            size: self.size,
         }
     }
 

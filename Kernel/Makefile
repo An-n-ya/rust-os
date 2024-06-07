@@ -58,8 +58,8 @@ endif
 # Compile rust kernel object
 $(OBJDIR)kernel.a: PHONY Makefile $(TARGETSPEC)
 	@mkdir -p $(dir $@)
-	RUSTFLAGS="$(RUSTFLAGS)" $(CARGO) build -Z build-std=core,alloc,compiler_builtins --target=$(TARGETSPEC) --release
-	@cp --preserve target/target/release/libkernel.a $@
+	RUSTFLAGS="$(RUSTFLAGS)" $(CARGO) build -Z build-std=core,alloc,compiler_builtins --target=$(TARGETSPEC)
+	@cp --preserve target/target/debug/libkernel.a $@
 
 # Compile architecture's assembly stub
 $(OBJDIR)start.o: arch/$(ARCH)/start.S Makefile

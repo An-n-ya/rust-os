@@ -1,6 +1,6 @@
 use crate::{MultibootInfo, KERNEL_BASE};
 
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, Clone, Copy)]
 pub struct Frame {
     pub addr: u64,
     pub size: PageSize,
@@ -51,6 +51,12 @@ impl Frame {
         Self {
             addr,
             size: PageSize::Small,
+        }
+    }
+    pub fn offset(&self, offset: u64) -> Self {
+        Self {
+            addr: self.addr + offset,
+            size: self.size,
         }
     }
 }

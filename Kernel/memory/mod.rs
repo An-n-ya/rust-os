@@ -1,3 +1,5 @@
+use alloc::string::ToString;
+
 use self::heap_allocator::HEAP_SIZE;
 use self::heap_allocator::HEAP_START;
 
@@ -46,22 +48,53 @@ pub fn read_page() {
     }
     log!("cr3: {cr3:#X}");
     let p4 = unsafe { &*P4 };
+    let mut addr = 0;
     for i in 0..512 {
         if !p4[i].is_unused() {
             log!("pml4 entry {} -> physical addr {:#X}", i, p4[i].addr());
-        }
-    }
-    let pml4 = cr3 + KERNEL_BASE;
-    let page_table_4 = pml4 as *const PageTable<Level4>;
-    for (i, entry) in unsafe { (*page_table_4).entries.iter().enumerate() } {
-        if !entry.is_unused() {
-            log!("pml4 entry {} -> physical addr {:#X}", i, entry.addr());
-            if entry.addr() != cr3 {
-                let pdpt = entry.addr() + KERNEL_BASE;
-                let pdpt = pdpt as *const PageTable<Level3>;
-                for (i, entry) in unsafe { (*pdpt).entries.iter().enumerate() } {
-                    if !entry.is_unused() {
-                        log!("  pdpt entry {} -> physical addr {:#X}", i, entry.addr());
+            if i != 510 {
+                let p3 = p4.next_table(i).unwrap();
+                addr &= !(0o777 << 12 + 9 + 9 + 9);
+                addr |= i << 39;
+                for i in 0..512 {
+                    if !p3[i].is_unused() && !p3[i].is_huge() {
+                        log!("  pdpt entry {} -> physical addr {:#X}", i, p3[i].addr());
+                        addr &= !(0o777 << 12 + 9 + 9);
+                        addr |= i << 30;
+                        if i != 510 {
+                            let p2 = p3.next_table(i).unwrap();
+                            for i in 0..512 {
+                                if !p2[i].is_unused() && !p2[i].is_huge() {
+                                    log!("    pd entry {} -> physical addr {:#X}", i, p2[i].addr());
+                                    addr &= !(0o777 << 12 + 9);
+                                    addr |= i << 21;
+                                    if i != 510 {
+                                        let p1 = p2.next_table(i).unwrap();
+                                        for i in 0..512 {
+                                            if !p1[i].is_unused() {
+                                                addr &= !(0o777 << 12);
+                                                addr |= i << 12;
+                                                let mut flags = ['-', '-'];
+                                                if p1[i].is_writable() {
+                                                    flags[0] = 'w';
+                                                }
+                                                if p1[i].is_present() {
+                                                    flags[1] = 'p';
+                                                }
+                                                log!(
+                                                    "      {:#X}-{:#X} {}{} -> physical addr {:#X}",
+                                                    addr,
+                                                    addr + 0x1000,
+                                                    flags[0],
+                                                    flags[1],
+                                                    p1[i].addr()
+                                                );
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -76,36 +109,20 @@ pub fn virt_to_physical(virt_addr: u64) -> u64 {
         virt_addr
     );
 
-    let cr3: u64;
-    unsafe {
-        core::arch::asm!("mov {}, cr3", out(reg) cr3, options(nomem, nostack, preserves_flags));
+    let p4 = unsafe { &*P4 };
+    let page = Page::new_small_page(virt_addr);
+    // log!("translate virt_addr {:#X}", virt_addr);
+    let p3 = p4.next_table(page.p4_index()).unwrap();
+    if p3[page.p3_index()].is_huge() {
+        return p3[page.p3_index()].addr() + virt_addr & 0x3fff_ffff;
     }
-    let pml4 = cr3 + KERNEL_BASE;
-    let mut table = pml4 as *const PageTable<Level4>;
-    let page_index = [
-        (virt_addr & 0o777 << 39) >> 39,
-        (virt_addr & 0o777 << 30) >> 30,
-        (virt_addr & 0o777 << 21) >> 21,
-        (virt_addr & 0o777 << 12) >> 12,
-    ];
-    for (i, index) in page_index.iter().enumerate() {
-        // log!("table addr {:#X}", table as u64);
-        let entry = unsafe { &(*table).entries[*index as usize] };
-        assert!(
-            !entry.is_unused(),
-            "try to access unused page, addr: {:#X}",
-            virt_addr
-        );
-        if (i == 1 || i == 2) && entry.is_huge() {
-            return entry.addr() + virt_addr & if i == 1 { 0x3fff_ffff } else { 0x001f_ffff };
-        }
-
-        table = (entry.addr() + KERNEL_BASE) as *const PageTable<Level4>;
-        if i == 3 {
-            return entry.addr() + virt_addr & 0x0fff;
-        }
+    let p2 = p3.next_table(page.p3_index()).unwrap();
+    if p2[page.p2_index()].is_huge() {
+        return p2[page.p2_index()].addr() + virt_addr & 0x001f_ffff;
     }
-    unreachable!()
+    let p1 = p2.next_table(page.p2_index()).unwrap();
+    let addr = p1[page.p1_index()].addr();
+    return addr + (virt_addr & 0x0fff);
 }
 
 pub fn map<A>(page: Page, frame: Frame, allocator: &mut A) -> &mut PageTableEntry
