@@ -19,18 +19,15 @@ const MSR_STAR_VALUE: u64 = 0x23_0008_0000_0000;
 
 #[no_mangle]
 pub extern "C" fn user_space_prog_1() {
-    log!("user space prog 1");
-    loop {
-        unsafe {
-            core::arch::asm!(
-                "
+    unsafe {
+        core::arch::asm!(
+            "
         nop
         nop
         nop
     ",
-                options(nostack, nomem, preserves_flags)
-            );
-        }
+            options(nostack, nomem, preserves_flags)
+        );
     }
 }
 
@@ -61,7 +58,7 @@ where
     table.enable();
     let user_space_page = Page::new_small_page(user_space_fn_virt_base);
     let phys_frame = Frame::new_small_page(page_phys_start);
-    for i in 0..100 {
+    for i in 0..5 {
         map(
             user_space_page.offset(0x1000 * i),
             phys_frame.offset(0x1000 * i),
@@ -80,7 +77,7 @@ where
     read_page();
 
     init_syscalls();
-    jump_to_user_mode(user_space_fn_virt, 0x80_1000 - 1);
+    jump_to_user_mode(user_space_fn_virt, 0x80_1000);
 }
 
 fn init_syscalls() {
