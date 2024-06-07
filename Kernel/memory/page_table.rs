@@ -2,6 +2,7 @@ use core::{
     marker::PhantomData,
     mem::transmute_copy,
     ops::{Index, IndexMut},
+    ptr::addr_of_mut,
 };
 
 use alloc::string::{String, ToString};
@@ -212,13 +213,15 @@ unsafe fn alloc_page_table() -> *mut PageTable<Level4> {
         entries: [PageTableEntry(0); 512],
         level: PhantomData,
     };
-    &mut TABLE as *mut PageTable<Level4>
+    addr_of_mut!(TABLE) as *mut PageTable<Level4>
 }
 pub fn kernel_page_table() -> *mut PageTable<Level4> {
     let p4 = unsafe { &*P4 };
     let new_p4 = unsafe { alloc_page_table() };
+    let p4_addr_phys = virt_to_physical(new_p4 as u64);
     let p = unsafe { &mut *new_p4 };
-    p.entries[510] = p4.entries[510];
+    // NOTE: 510 must be the table's own address!
+    p.entries[510] = PageTableEntry(p4_addr_phys | 3);
     p.entries[511] = p4.entries[511];
 
     new_p4

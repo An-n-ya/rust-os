@@ -11,20 +11,16 @@ use self::frame::Frame;
 use self::frame::FrameAllocator;
 use self::page_table::PageTableEntry;
 
-use self::page_table::Level3;
-use self::page_table::Level4;
-
 use self::page_table::P4;
 
 use self::frame::PageSize;
 
 use self::frame::Allocator;
 
-use self::page_table::PageTable;
-
-use crate::{MultibootInfo, KERNEL_BASE};
+use crate::MultibootInfo;
 
 pub mod frame;
+pub mod gdt;
 pub mod heap_allocator;
 pub mod page_table;
 
@@ -82,7 +78,7 @@ pub fn read_page() {
                                                     flags[1] = 'p';
                                                 }
                                                 log!(
-                                                    "      {:#X}-{:#X} {}{} -> physical addr {:#X}",
+                                                    "      {:#X}-{:#X} {}{} ->  {:#X}",
                                                     addr,
                                                     addr + 0x1000,
                                                     flags[0],
@@ -140,8 +136,6 @@ where
 
     assert!(p1[page.p1_index()].is_unused());
     let entry = p1[page.p1_index()].set_addr(frame.addr).set_present(true);
-
-    flush_page_table();
 
     entry
 }

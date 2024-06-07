@@ -19,7 +19,7 @@ use core::str::from_raw_parts;
 
 #[allow(unused_imports)]
 use interrupts::divide_by_zero;
-use memory::{frame::Allocator, read_page, virt_to_physical};
+use memory::{frame::Allocator, gdt, read_page, virt_to_physical};
 use proc::test_user_space;
 use vga::TerminalWriter;
 
@@ -130,7 +130,7 @@ pub unsafe extern "C" fn kmain(_multiboot_magic: u64, _info: *const MultibootInf
     let mut allocator = Allocator::new(_info, (start_addr, end_addr));
     memory::init(&mut allocator);
 
-    // read_page();
+    read_page();
 
     test_user_space(&mut allocator);
 
@@ -151,6 +151,7 @@ pub fn hlt() -> ! {
 fn init() {
     TerminalWriter::init();
     interrupts::init();
+    gdt::init();
 }
 
 #[allow(dead_code)]
