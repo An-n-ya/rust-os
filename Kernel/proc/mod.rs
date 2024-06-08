@@ -22,34 +22,95 @@ const MSR_FMASK: u64 = 0xC000_0084;
 const MSR_IA32_EFER: u64 = 0xC000_0081;
 const MSR_STAR_VALUE: u64 = 0x23_0008_0000_0000;
 
-#[naked]
-#[allow(undefined_naked_function_abi)]
-pub unsafe fn user_space_prog_1() {
-    core::arch::asm!(
-        "
+// #[naked]
+// #[allow(undefined_naked_function_abi)]
+pub unsafe extern "C" fn user_space_prog_1() {
+    loop {
+        core::arch::asm!(
+            "
+        mov rax, 0xCA11
+        mov rdi, 10
+        mov rsi, 20
+        mov rdx, 30
+        mov r10, 40
         syscall
-        nop
-        nop
-        nop
-        ret
     ",
-        options(noreturn)
-    )
+        )
+    }
 }
-#[naked]
-#[allow(undefined_naked_function_abi)]
-fn handle_syscall() {
+// #[allow(undefined_naked_function_abi)]
+extern "C" fn handle_syscall() {
     unsafe {
         core::arch::asm!(
             "
-        nop
-        nop
-        nop
-        sysretq
+            push rcx
+            push r11
+            push rbp
+            push rbx
+            push r12
+            push r13
+            push r14
+            push r15
+            mov rbp, rsp
+            sub rsp, 0x400
         ",
-            options(noreturn),
         )
     }
+    let syscall: u64;
+    let arg0: u64;
+    let arg1: u64;
+    let arg2: u64;
+    let arg3: u64;
+    unsafe {
+        core::arch::asm!("
+        ",
+            out("rax") syscall,
+            out("rdi") arg0,
+            out("rsi") arg1,
+            out("rdx") arg2,
+            out("r10") arg3,
+        )
+    }
+    log!("syscall {:x} {} {} {} {}", syscall, arg0, arg1, arg2, arg3);
+    let syscall_stack: Vec<u8> = Vec::with_capacity(0x1000);
+    #[allow(unused)]
+    let stack_ptr = syscall_stack.as_ptr() as u64;
+    unsafe {
+        core::arch::asm!(
+            "
+            mov rsp, rax
+            sti
+            ",
+        )
+    }
+
+    // handle syscall here
+
+    let retval: u64 = 0;
+    unsafe {
+        core::arch::asm!("
+        mov rbx, {}
+        cli
+        ", in(reg) retval)
+    }
+    drop(syscall_stack);
+    unsafe {
+        core::arch::asm!(
+            "
+        mov rax, rbx
+        mov rsp, rbp
+        pop r15
+        pop r14
+        pop r13
+        pop r12
+        pop rbx
+        pop rbp
+        pop r11
+        pop rcx
+        "
+        )
+    }
+    unsafe { core::arch::asm!("sysretq") }
 }
 
 pub fn test_user_space<A>(allocator: &mut A)
@@ -89,14 +150,20 @@ where
         .set_present(true);
     }
 
-    map_user(stack_page, stack_phys_frame, allocator)
+    for i in 0..5 {
+        map_user(
+            stack_page.offset(0x1000 * i),
+            stack_phys_frame.offset(0x1000 * i),
+            allocator,
+        )
         .set_present(true)
         .set_writable(true);
+    }
 
     read_page();
 
     init_syscalls();
-    jump_to_user_mode(user_space_fn_virt, 0x80_1000);
+    jump_to_user_mode(user_space_fn_virt, 0x80_5000);
     // prevent rust from freeing stack early
     drop(stack_space);
     hlt();

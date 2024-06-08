@@ -209,6 +209,7 @@ pub fn kernel_page_table() -> *mut PageTable<Level4> {
     // NOTE: 510 must be the table's own address!
     p.entries[510] = PageTableEntry(p4_addr_phys | 3);
     p.entries[511] = p4.entries[511];
+    p.entries[32] = p4.entries[32];
 
     new_p4
 }
