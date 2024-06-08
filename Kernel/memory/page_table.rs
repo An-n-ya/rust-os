@@ -77,6 +77,9 @@ impl PageTableEntry {
     pub fn is_present(&self) -> bool {
         self.0 & 1 != 0
     }
+    pub fn is_user(&self) -> bool {
+        self.0 & 1 << 2 != 0
+    }
     pub fn set_user(&mut self, flag: bool) -> &mut Self {
         if flag {
             self.0 |= 1 << 2;
@@ -246,6 +249,7 @@ where
     pub fn next_table_create<A>(
         &mut self,
         index: usize,
+        is_user: bool,
         allocator: &mut A,
     ) -> &mut PageTable<L::NextLevel>
     where
@@ -261,6 +265,9 @@ where
                 .set_addr(frame.addr)
                 .set_present(true)
                 .set_writable(true);
+            if is_user {
+                self.entries[index].set_user(true);
+            }
             self.next_table_mut(index).unwrap().reset();
         }
         self.next_table_mut(index).unwrap()

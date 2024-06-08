@@ -5,12 +5,12 @@ use crate::hlt;
 use crate::interrupts::disable;
 use crate::memory::gdt::{CS_SEL_USER, DS_SEL_USER};
 
+use crate::memory::map_user;
 // use crate::memory::gdt::set_usermode_segs;
 use crate::{
     arch::instruction::{rdmsr, wrmsr},
     memory::{
         frame::{Frame, FrameAllocator},
-        map,
         page_table::{flush_page_table, kernel_page_table, Page},
         read_page, virt_to_physical,
     },
@@ -81,19 +81,16 @@ where
     let user_space_page = Page::new_small_page(user_space_fn_virt_base);
     let phys_frame = Frame::new_small_page(page_phys_start);
     for i in 0..5 {
-        map(
+        map_user(
             user_space_page.offset(0x1000 * i),
             phys_frame.offset(0x1000 * i),
             allocator,
         )
-        .set_present(true)
-        .set_writable(true)
-        .set_user(true);
+        .set_present(true);
     }
 
-    map(stack_page, stack_phys_frame, allocator)
+    map_user(stack_page, stack_phys_frame, allocator)
         .set_present(true)
-        .set_user(true)
         .set_writable(true);
 
     read_page();

@@ -70,19 +70,23 @@ pub fn read_page() {
                                             if !p1[i].is_unused() {
                                                 addr &= !(0o777 << 12);
                                                 addr |= i << 12;
-                                                let mut flags = ['-', '-'];
+                                                let mut flags = ['-', '-', '-'];
                                                 if p1[i].is_writable() {
                                                     flags[0] = 'w';
                                                 }
                                                 if p1[i].is_present() {
                                                     flags[1] = 'p';
                                                 }
+                                                if p1[i].is_user() {
+                                                    flags[2] = 'u';
+                                                }
                                                 log!(
-                                                    "      {:#X}-{:#X} {}{} ->  {:#X}",
+                                                    "      {:#X}-{:#X} {}{}{} ->  {:#X}",
                                                     addr,
                                                     addr + 0x1000,
                                                     flags[0],
                                                     flags[1],
+                                                    flags[2],
                                                     p1[i].addr()
                                                 );
                                             }
@@ -121,6 +125,28 @@ pub fn virt_to_physical(virt_addr: u64) -> u64 {
     return addr + (virt_addr & 0x0fff);
 }
 
+pub fn map_user<A>(page: Page, frame: Frame, allocator: &mut A) -> &mut PageTableEntry
+where
+    A: FrameAllocator,
+{
+    assert!(
+        page.size == PageSize::Small,
+        "UNIMPLEMENTED: only 4kb mapping is support currently"
+    );
+    let p4 = unsafe { &mut *P4 };
+    let p3 = p4.next_table_create(page.p4_index(), true, allocator);
+    let p2 = p3.next_table_create(page.p3_index(), true, allocator);
+    let p1 = p2.next_table_create(page.p2_index(), true, allocator);
+
+    assert!(p1[page.p1_index()].is_unused());
+    let entry = p1[page.p1_index()]
+        .set_addr(frame.addr)
+        .set_present(true)
+        .set_user(true);
+
+    entry
+}
+
 pub fn map<A>(page: Page, frame: Frame, allocator: &mut A) -> &mut PageTableEntry
 where
     A: FrameAllocator,
@@ -130,9 +156,9 @@ where
         "UNIMPLEMENTED: only 4kb mapping is support currently"
     );
     let p4 = unsafe { &mut *P4 };
-    let p3 = p4.next_table_create(page.p4_index(), allocator);
-    let p2 = p3.next_table_create(page.p3_index(), allocator);
-    let p1 = p2.next_table_create(page.p2_index(), allocator);
+    let p3 = p4.next_table_create(page.p4_index(), false, allocator);
+    let p2 = p3.next_table_create(page.p3_index(), false, allocator);
+    let p1 = p2.next_table_create(page.p2_index(), false, allocator);
 
     assert!(p1[page.p1_index()].is_unused());
     let entry = p1[page.p1_index()].set_addr(frame.addr).set_present(true);

@@ -58,12 +58,11 @@ pub extern "x86-interrupt" fn stack_segment_fault_interrupt(
 }
 
 pub extern "x86-interrupt" fn page_fault_handler(frame: ExceptionFrame, error_code: u64) {
-    log!("errorcode: {}", error_code);
+    handle_page_fault_errorcode(error_code);
     let cr2: u64;
     unsafe {
         core::arch::asm!("mov {}, cr2", out(reg) cr2, options(nomem, nostack, preserves_flags));
     }
-    log!("page fault handler missing");
     log!("trying to access addr {:#X}", cr2);
     log!("EXCEPTION MESSAGE: {frame:#?}");
     hlt();
@@ -71,7 +70,6 @@ pub extern "x86-interrupt" fn page_fault_handler(frame: ExceptionFrame, error_co
 
 pub extern "x86-interrupt" fn double_fault_handler(frame: ExceptionFrame, error_code: u64) {
     // the error_code is related to segment fault, which is quite useless
-    hlt();
     log!("EXCEPTION: DOUBLE FAULT, errorcode: {error_code}");
     log!("EXCEPTION MESSAGE: {frame:#?}");
     hlt();
@@ -89,4 +87,23 @@ pub extern "x86-interrupt" fn general_protection_fault_handler(
     log!("protection fault occur!");
     log!("EXCEPTION MESSAGE: {frame:#?}");
     hlt();
+}
+
+fn handle_page_fault_errorcode(error_code: u64) {
+    log!("page fault, ERROR:");
+    if error_code & 1 != 0 {
+        log!("  PROTECTION VIOLATION");
+    }
+    if error_code & 1 << 1 != 0 {
+        log!("  CAUSED BY WRITE");
+    }
+    if error_code & 1 << 2 != 0 {
+        log!("  USER MODE");
+    }
+    if error_code & 1 << 3 != 0 {
+        log!("  MALFORMED TABLE");
+    }
+    if error_code & 1 << 4 != 0 {
+        log!("  INSTRUCTION FETCH");
+    }
 }
