@@ -10,6 +10,7 @@ pub const HEAP_SIZE: usize = 100 * 1024;
 static ALLOCATOR: HeapAllocator = HeapAllocator::new(HEAP_START, HEAP_START + HEAP_SIZE);
 
 pub struct HeapAllocator {
+    #[allow(unused)]
     heap_start: usize,
     heap_end: usize,
     next: AtomicUsize,

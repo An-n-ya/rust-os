@@ -6,6 +6,7 @@ pub struct Frame {
     pub size: PageSize,
 }
 
+#[allow(unused)]
 #[derive(Clone, Copy)]
 struct Area {
     size: u32,
@@ -14,6 +15,7 @@ struct Area {
     typ: u32,
 }
 
+#[allow(unused)]
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum PageSize {
     Small = 0x1000,
@@ -21,6 +23,7 @@ pub enum PageSize {
     Large = 0x4000_0000,
 }
 
+#[allow(unused)]
 pub trait FrameAllocator {
     fn allocate_frame(&mut self) -> Option<Frame>;
     fn deallocate_frame(&mut self, frame: Frame);
@@ -44,6 +47,7 @@ struct AreaIterator {
 
 impl Frame {
     // not included
+    #[allow(unused)]
     pub fn end_addr(&self) -> u64 {
         self.addr + self.size as u64 - 1
     }

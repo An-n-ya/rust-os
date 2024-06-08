@@ -70,7 +70,7 @@ where
         user_space_fn_virt_base,
         fn_page_offset
     );
-    let mut stack_space: Vec<u8> = vec![0; 1000];
+    let stack_space: Vec<u8> = vec![0; 1000];
     let ptr = stack_space.as_ptr() as *const u8 as u64;
     let stack_space_phys = virt_to_physical(ptr);
     let stack_page = Page::new_small_page(0x80_0000);

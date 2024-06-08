@@ -1,14 +1,11 @@
 use core::{
     marker::PhantomData,
-    mem::transmute_copy,
     ops::{Index, IndexMut},
     ptr::addr_of_mut,
 };
 
-use alloc::string::{String, ToString};
-
 use super::{
-    frame::{Frame, FrameAllocator, PageSize},
+    frame::{FrameAllocator, PageSize},
     virt_to_physical,
 };
 
@@ -110,6 +107,7 @@ impl PageTableEntry {
     pub fn is_huge(&self) -> bool {
         self.0 & 1 << 7 != 0
     }
+    #[allow(unused)]
     pub fn set_huge(&mut self, flag: bool) -> &mut Self {
         if flag {
             self.0 |= 1 << 7;
@@ -117,21 +115,6 @@ impl PageTableEntry {
             self.0 &= !(1 << 7);
         }
         self
-    }
-
-    pub fn printable_flag(&self) -> String {
-        let mut flags = "".to_string();
-        if self.is_writable() {
-            flags.push('w');
-        } else {
-            flags.push('-');
-        }
-        if self.is_present() {
-            flags.push('p');
-        } else {
-            flags.push('-');
-        }
-        flags
     }
 }
 
@@ -233,6 +216,7 @@ impl<L> PageTable<L>
 where
     L: HierarchicalLevel,
 {
+    #[allow(unused)]
     pub fn next_table_is_huge(&self, index: usize) -> bool {
         assert!(index < 512);
         self[index].is_huge()

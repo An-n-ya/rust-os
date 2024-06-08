@@ -1,5 +1,3 @@
-use alloc::string::ToString;
-
 use self::heap_allocator::HEAP_SIZE;
 use self::heap_allocator::HEAP_START;
 
@@ -166,6 +164,7 @@ where
     entry
 }
 
+#[allow(dead_code)]
 pub fn unmap<A>(virt_addr: u64, allocator: &mut A)
 where
     A: FrameAllocator,
@@ -198,6 +197,7 @@ where
     flush_page_table();
 }
 
+#[allow(unused)]
 pub fn test_allocator(info: *const MultibootInfo, kernel_range: (u64, u64)) {
     let mut allocator = Allocator::new(info, kernel_range);
     let f = allocator.new_frame();
@@ -209,6 +209,7 @@ pub fn test_allocator(info: *const MultibootInfo, kernel_range: (u64, u64)) {
     );
 }
 
+#[allow(unused)]
 pub fn test_map<A>(allocator: &mut A)
 where
     A: FrameAllocator,
