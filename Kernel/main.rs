@@ -12,6 +12,7 @@
 #![feature(str_from_raw_parts)]
 #![feature(abi_x86_interrupt)]
 #![feature(allocator_api)]
+#![feature(naked_functions)]
 #![no_std] //< Kernels can't use std
 #![crate_name = "kernel"]
 

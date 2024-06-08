@@ -49,12 +49,12 @@ impl GlobalDescriptorTable {
     pub const fn new() -> Self {
         Self([
             GDTEntry(0),
-            GDTEntry(0x00209A00_00000000), // Kernel Code
-            GDTEntry(0x00009200_00000000), // Kernel Data
+            GDTEntry(0x00209B00_00000000), // Kernel Code
+            GDTEntry(0x00009300_00000000), // Kernel Data
             GDTEntry(0),                   // TSS low
             GDTEntry(0),                   // TSS high
-            GDTEntry(0x0020FA00_00000000), // User Code
-            GDTEntry(0x0000F200_00000000), // User Data
+            GDTEntry(0x0020FB00_00000000), // User Code
+            GDTEntry(0x0000F300_00000000), // User Data
         ])
     }
     pub fn load_tss(&mut self, tss: *const TaskStateSegment) {
@@ -62,9 +62,9 @@ impl GlobalDescriptorTable {
         // refer to: https://wiki.osdev.org/Global_Descriptor_Table
         let mut low = 1 << 47; // present
         low |= (ptr & 0xff_ffff) << 16;
-        low |= (ptr & 0xff00_0000) << 56;
+        low |= (ptr & 0xff00_0000) >> 24 << 56;
         low |= (core::mem::size_of::<TaskStateSegment>() - 1) as u64 & 0xffff;
-        low |= 0b1001 << 40;
+        low |= 0b10001001 << 40;
         let high = ptr >> 32;
         self.0[3] = GDTEntry(low);
         self.0[4] = GDTEntry(high);

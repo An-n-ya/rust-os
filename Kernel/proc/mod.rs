@@ -1,8 +1,11 @@
 use alloc::vec;
 use alloc::vec::Vec;
 
+use crate::hlt;
+use crate::interrupts::disable;
 use crate::memory::gdt::{CS_SEL_USER, DS_SEL_USER};
 
+// use crate::memory::gdt::set_usermode_segs;
 use crate::{
     arch::instruction::{rdmsr, wrmsr},
     memory::{
@@ -14,20 +17,38 @@ use crate::{
 };
 
 const MSR_STAR: u64 = 0xC000_0081;
+const MSR_LSTAR: u64 = 0xC000_0082;
+const MSR_FMASK: u64 = 0xC000_0084;
 const MSR_IA32_EFER: u64 = 0xC000_0081;
 const MSR_STAR_VALUE: u64 = 0x23_0008_0000_0000;
 
-#[no_mangle]
-pub extern "C" fn user_space_prog_1() {
+#[naked]
+#[allow(undefined_naked_function_abi)]
+pub unsafe fn user_space_prog_1() {
+    core::arch::asm!(
+        "
+        syscall
+        nop
+        nop
+        nop
+        ret
+    ",
+        options(noreturn)
+    )
+}
+#[naked]
+#[allow(undefined_naked_function_abi)]
+fn handle_syscall() {
     unsafe {
         core::arch::asm!(
             "
         nop
         nop
         nop
-    ",
-            options(nostack, nomem, preserves_flags)
-        );
+        sysretq
+        ",
+            options(noreturn),
+        )
     }
 }
 
@@ -35,6 +56,7 @@ pub fn test_user_space<A>(allocator: &mut A)
 where
     A: FrameAllocator,
 {
+    disable();
     let user_space_fn_in_kernel = user_space_prog_1 as *const () as u64;
     log!("fn addr {:#X}", user_space_fn_in_kernel);
     let user_space_fn_phys = virt_to_physical(user_space_fn_in_kernel);
@@ -78,6 +100,9 @@ where
 
     init_syscalls();
     jump_to_user_mode(user_space_fn_virt, 0x80_1000);
+    // prevent rust from freeing stack early
+    drop(stack_space);
+    hlt();
 }
 
 fn init_syscalls() {
@@ -86,6 +111,9 @@ fn init_syscalls() {
     let mut val = rdmsr(MSR_IA32_EFER);
     val |= 1;
     wrmsr(MSR_IA32_EFER, val);
+    wrmsr(MSR_FMASK, 0x200);
+    let handler_addr = handle_syscall as *const () as u64;
+    wrmsr(MSR_LSTAR, handler_addr);
 }
 
 #[no_mangle]
@@ -102,6 +130,7 @@ pub fn jump_to_user_mode(code: u64, stack_end: u64) {
             "mov ds, {0:x}", in(reg) DS_SEL_USER, options(nostack, preserves_flags)
         );
     }
+    // let (cs_idx, ds_idx) = unsafe { set_usermode_segs() };
     flush_page_table();
     let a = unsafe { *(0x80_0fff as *const u8) };
     log!("a {}", a);
@@ -123,4 +152,20 @@ pub fn jump_to_user_mode(code: u64, stack_end: u64) {
         );
         core::arch::asm!("iretq")
     }
+    // unsafe {
+    //     core::arch::asm!(
+    //         "
+    //         push rax
+    //         push rsi
+    //         push 0x200
+    //         push rdx
+    //         push rdi
+    //     ",
+    //     in("rax") ds_idx,
+    //     in("rsi") stack_end,
+    //     in("rdx") cs_idx,
+    //     in("rdi") code,
+    //     );
+    //     core::arch::asm!("iretq")
+    // }
 }

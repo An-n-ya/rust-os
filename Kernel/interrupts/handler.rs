@@ -71,9 +71,10 @@ pub extern "x86-interrupt" fn page_fault_handler(frame: ExceptionFrame, error_co
 
 pub extern "x86-interrupt" fn double_fault_handler(frame: ExceptionFrame, error_code: u64) {
     // the error_code is related to segment fault, which is quite useless
+    hlt();
     log!("EXCEPTION: DOUBLE FAULT, errorcode: {error_code}");
     log!("EXCEPTION MESSAGE: {frame:#?}");
-    loop {}
+    hlt();
 }
 
 pub extern "x86-interrupt" fn timer_interrupt_handler(_frame: ExceptionFrame) {
