@@ -49,6 +49,13 @@ clean:
 test:
 	RUSTFLAGS="$(RUSTFLAGS)" $(CARGO) test -Z build-std=core,alloc,compiler_builtins  --target=$(TARGETSPEC) --lib
 
+run: $(BIN)
+	qemu-system-x86_64 -kernel ../kernel.amd64.bin -serial stdio -no-reboot
+debug: $(BIN)
+	qemu-system-x86_64 -kernel ../kernel.amd64.bin -serial stdio -no-reboot -d int -s -S
+monitor: $(BIN)
+	qemu-system-x86_64 -kernel ../kernel.amd64.bin -monitor stdio -no-reboot -d int -s -S
+
 
 # Final link command
 $(BIN): $(OBJS) arch/$(ARCH)/link.ld
