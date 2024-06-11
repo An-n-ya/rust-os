@@ -21,7 +21,7 @@ use core::str::from_raw_parts;
 #[allow(unused_imports)]
 use interrupts::divide_by_zero;
 use memory::{frame::Allocator, gdt, read_page, virt_to_physical};
-use proc::test_user_space;
+use proc::{exec, user_space_prog_1};
 use vga::TerminalWriter;
 
 /// Macros, need to be loaded before everything else due to how rust parses
@@ -133,7 +133,7 @@ pub unsafe extern "C" fn kmain(_multiboot_magic: u64, _info: *const MultibootInf
 
     read_page();
 
-    test_user_space(&mut allocator);
+    exec(user_space_prog_1 as *const () as u64, &mut allocator);
 
     // test_allocator(_info, (start_addr, end_addr));
     // test_map(&mut allocator);
@@ -153,6 +153,7 @@ fn init() {
     TerminalWriter::init();
     interrupts::init();
     gdt::init();
+    proc::init_syscalls();
 }
 
 #[allow(dead_code)]

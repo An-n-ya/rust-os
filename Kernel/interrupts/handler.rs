@@ -83,8 +83,8 @@ pub extern "x86-interrupt" fn general_protection_fault_handler(
     frame: ExceptionFrame,
     error_code: u64,
 ) {
-    log!("error code {}", error_code);
-    log!("protection fault occur!");
+    log!("error code {:#X}", error_code);
+    log!("general protection fault occur!");
     log!("EXCEPTION MESSAGE: {frame:#?}");
     hlt();
 }

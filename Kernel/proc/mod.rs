@@ -20,25 +20,84 @@ const MSR_STAR: u64 = 0xC000_0081;
 const MSR_LSTAR: u64 = 0xC000_0082;
 const MSR_FMASK: u64 = 0xC000_0084;
 const MSR_IA32_EFER: u64 = 0xC000_0081;
-const MSR_STAR_VALUE: u64 = 0x23_0008_0000_0000;
+const MSR_STAR_VALUE: u64 = 0x23_0010_0000_0000;
 
-// #[naked]
-// #[allow(undefined_naked_function_abi)]
-pub unsafe extern "C" fn user_space_prog_1() {
-    loop {
-        core::arch::asm!(
-            "
-        mov rax, 0xCA11
-        mov rdi, 10
-        mov rsi, 20
-        mov rdx, 30
-        mov r10, 40
-        syscall
-    ",
-        )
-    }
+#[repr(C)]
+struct SyscallFrame {
+    rax: u64,
+    rdi: u64,
+    rsi: u64,
+    rdx: u64,
+    r10: u64,
 }
+
+#[naked]
+#[allow(undefined_naked_function_abi)]
+pub unsafe extern "C" fn user_space_prog_1() {
+    core::arch::asm!(
+        "
+        mov rbx, 0xf0000000
+        ",
+        "3:", // we cannot use 1 or 0 as label, refer to: https://bugs.llvm.org/show_bug.cgi?id=36144
+        "
+        push 0x595ca11a
+        mov rbp, 0x1
+        mov rax, 0x2
+        mov rcx, 0x3
+        mov rdx, 0x4
+        mov rdi, 0x5
+        mov r8, 0x6
+        mov r9, 0x7
+        mov r10, 0x8
+        mov r11, 0x9
+        mov r12, 0xa
+        mov r13, 0xb
+        mov r14, 0xc
+        mov r15, 0xd
+
+
+        pop rax
+        inc rbx
+        mov rdi, rsp
+        mov rsi, rbx
+        syscall",
+        "jmp 3b",
+        options(noreturn)
+    )
+}
+pub unsafe extern "C" fn user_space_prog_2() {
+    // there are "something" in the stack
+    core::arch::asm!(
+        "
+        mov rbx, 0x0
+        3:
+        push 0x595ca11b
+        mov rbp, 0x11
+        mov rax, 0x21
+        mov rcx, 0x31
+        mov rdx, 0x41
+        mov rdi, 0x51
+        mov r8, 0x61
+        mov r9, 0x71
+        mov r10, 0x81
+        mov r11, 0x91
+        mov r12, 0xa1
+        mov r13, 0xb1
+        mov r14, 0xc1
+        mov r15, 0xd1
+        xor rax, rax
+        pop rax
+        inc rbx
+        mov rdi, rsp
+        mov rsi, rbx
+        syscall
+        jmp 3b
+    ",
+    )
+}
+
 // #[allow(undefined_naked_function_abi)]
+#[naked]
 extern "C" fn handle_syscall() {
     unsafe {
         core::arch::asm!(
@@ -53,50 +112,25 @@ extern "C" fn handle_syscall() {
             push r15
             mov rbp, rsp
             sub rsp, 0x400
-        ",
-        )
-    }
-    let syscall: u64;
-    let arg0: u64;
-    let arg1: u64;
-    let arg2: u64;
-    let arg3: u64;
-    unsafe {
-        core::arch::asm!("
-        ",
-            out("rax") syscall,
-            out("rdi") arg0,
-            out("rsi") arg1,
-            out("rdx") arg2,
-            out("r10") arg3,
-        )
-    }
-    log!("syscall {:x} {} {} {} {}", syscall, arg0, arg1, arg2, arg3);
-    let syscall_stack: Vec<u8> = Vec::with_capacity(0x1000);
-    #[allow(unused)]
-    let stack_ptr = syscall_stack.as_ptr() as u64;
-    unsafe {
-        core::arch::asm!(
-            "
-            mov rsp, rax
-            sti
-            ",
-        )
-    }
 
-    // handle syscall here
+            push r10
+            push rdx
+            push rsi
+            push rdi
+            push rax
 
-    let retval: u64 = 0;
-    unsafe {
-        core::arch::asm!("
-        mov rbx, {}
-        cli
-        ", in(reg) retval)
-    }
-    drop(syscall_stack);
-    unsafe {
-        core::arch::asm!(
-            "
+            mov rdi, rsp
+
+            cld
+            call x64_handle_syscall
+            cli
+
+            pop rax
+            pop rdi
+            pop rsi
+            pop rdx
+            pop r10
+
         mov rax, rbx
         mov rsp, rbp
         pop r15
@@ -107,18 +141,29 @@ extern "C" fn handle_syscall() {
         pop rbp
         pop r11
         pop rcx
-        "
+        sysretq
+        ",
+            options(noreturn)
         )
     }
-    unsafe { core::arch::asm!("sysretq") }
 }
 
-pub fn test_user_space<A>(allocator: &mut A)
+#[no_mangle]
+fn x64_handle_syscall(frame: *mut SyscallFrame) -> u64 {
+    let rax = unsafe { (*frame).rax };
+    let rdi = unsafe { (*frame).rdi };
+    let rsi = unsafe { (*frame).rsi };
+    let rdx = unsafe { (*frame).rdx };
+    let r10 = unsafe { (*frame).r10 };
+    log!("syscall {:x} {:x} {:x} {:x} {:x}", rax, rdi, rsi, rdx, r10);
+    0
+}
+
+pub fn exec<A>(user_space_fn_in_kernel: u64, allocator: &mut A)
 where
     A: FrameAllocator,
 {
-    disable();
-    let user_space_fn_in_kernel = user_space_prog_1 as *const () as u64;
+    // disable();
     log!("fn addr {:#X}", user_space_fn_in_kernel);
     let user_space_fn_phys = virt_to_physical(user_space_fn_in_kernel);
     let page_phys_start = (user_space_fn_phys >> 12) << 12;
@@ -162,14 +207,13 @@ where
 
     read_page();
 
-    init_syscalls();
     jump_to_user_mode(user_space_fn_virt, 0x80_5000);
     // prevent rust from freeing stack early
     drop(stack_space);
     hlt();
 }
 
-fn init_syscalls() {
+pub fn init_syscalls() {
     wrmsr(MSR_STAR, MSR_STAR_VALUE);
     // enable system call extensions
     let mut val = rdmsr(MSR_IA32_EFER);
@@ -182,23 +226,14 @@ fn init_syscalls() {
 
 #[no_mangle]
 pub fn jump_to_user_mode(code: u64, stack_end: u64) {
-    log!("code addr {:#X}", code);
-    // let a = unsafe { *(code as *const u32) };
-    // log!("a {}", a);
-    // let f = code as *const ();
-    // let f: extern "C" fn() = unsafe { core::mem::transmute(f) };
-    // f();
-    // loop {}
+    // log!("code addr {:#X}", code);
     unsafe {
         core::arch::asm!(
             "mov ds, {0:x}", in(reg) DS_SEL_USER, options(nostack, preserves_flags)
         );
     }
-    // let (cs_idx, ds_idx) = unsafe { set_usermode_segs() };
     flush_page_table();
-    let a = unsafe { *(0x80_0fff as *const u8) };
-    log!("a {}", a);
-    unsafe { *(0x80_0fff as *mut u8) = 1 };
+    // unsafe { *(0x80_0fff as *mut u8) = 1 };
     // loop {}
     unsafe {
         core::arch::asm!(
@@ -216,20 +251,4 @@ pub fn jump_to_user_mode(code: u64, stack_end: u64) {
         );
         core::arch::asm!("iretq")
     }
-    // unsafe {
-    //     core::arch::asm!(
-    //         "
-    //         push rax
-    //         push rsi
-    //         push 0x200
-    //         push rdx
-    //         push rdi
-    //     ",
-    //     in("rax") ds_idx,
-    //     in("rsi") stack_end,
-    //     in("rdx") cs_idx,
-    //     in("rdi") code,
-    //     );
-    //     core::arch::asm!("iretq")
-    // }
 }

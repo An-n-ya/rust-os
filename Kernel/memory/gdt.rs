@@ -10,8 +10,8 @@ static mut GDT: GlobalDescriptorTable = GlobalDescriptorTable::new();
 pub const CS_SEL_KERNEL: u16 = 1 << 3 | 0;
 pub const DS_SEL_KERNEL: u16 = 2 << 3 | 0;
 pub const TSS_SEL_USER: u16 = 3 << 3 | 0;
-pub const CS_SEL_USER: u16 = 5 << 3 | 3;
-pub const DS_SEL_USER: u16 = 6 << 3 | 3;
+pub const DS_SEL_USER: u16 = 5 << 3 | 3;
+pub const CS_SEL_USER: u16 = 6 << 3 | 3;
 
 #[repr(C, packed(4))]
 struct TaskStateSegment {
@@ -53,8 +53,8 @@ impl GlobalDescriptorTable {
             GDTEntry(0x00009300_00000000), // Kernel Data
             GDTEntry(0),                   // TSS low
             GDTEntry(0),                   // TSS high
-            GDTEntry(0x0020FB00_00000000), // User Code
             GDTEntry(0x0000F300_00000000), // User Data
+            GDTEntry(0x0020FB00_00000000), // User Code
         ])
     }
     pub fn load_tss(&mut self, tss: *const TaskStateSegment) {
@@ -64,7 +64,7 @@ impl GlobalDescriptorTable {
         low |= (ptr & 0xff_ffff) << 16;
         low |= (ptr & 0xff00_0000) >> 24 << 56;
         low |= (core::mem::size_of::<TaskStateSegment>() - 1) as u64 & 0xffff;
-        low |= 0b10001001 << 40;
+        low |= 0b1001 << 40;
         let high = ptr >> 32;
         self.0[3] = GDTEntry(low);
         self.0[4] = GDTEntry(high);
