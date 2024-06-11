@@ -2,7 +2,6 @@ use alloc::vec;
 use alloc::vec::Vec;
 
 use crate::hlt;
-use crate::interrupts::disable;
 use crate::memory::gdt::{CS_SEL_USER, DS_SEL_USER};
 
 use crate::memory::map_user;
@@ -55,6 +54,12 @@ pub unsafe extern "C" fn user_space_prog_1() {
         mov r14, 0xc
         mov r15, 0xd
 
+        xor rax, rax
+        2:
+        inc rax
+        cmp rax, 0x8000000
+        jnz 2b
+
 
         pop rax
         inc rbx
@@ -65,12 +70,15 @@ pub unsafe extern "C" fn user_space_prog_1() {
         options(noreturn)
     )
 }
+#[naked]
+#[allow(undefined_naked_function_abi)]
 pub unsafe extern "C" fn user_space_prog_2() {
-    // there are "something" in the stack
     core::arch::asm!(
         "
         mov rbx, 0x0
-        3:
+        ",
+        "3:", // we cannot use 1 or 0 as label, refer to: https://bugs.llvm.org/show_bug.cgi?id=36144
+        "
         push 0x595ca11b
         mov rbp, 0x11
         mov rax, 0x21
@@ -85,14 +93,21 @@ pub unsafe extern "C" fn user_space_prog_2() {
         mov r13, 0xb1
         mov r14, 0xc1
         mov r15, 0xd1
+
         xor rax, rax
+        2:
+        inc rax
+        cmp rax, 0x8000000
+        jnz 2b
+
+
         pop rax
         inc rbx
         mov rdi, rsp
         mov rsi, rbx
-        syscall
-        jmp 3b
-    ",
+        syscall",
+        "jmp 3b",
+        options(noreturn)
     )
 }
 
@@ -214,6 +229,7 @@ where
 }
 
 pub fn init_syscalls() {
+    log!("init syscallls");
     wrmsr(MSR_STAR, MSR_STAR_VALUE);
     // enable system call extensions
     let mut val = rdmsr(MSR_IA32_EFER);

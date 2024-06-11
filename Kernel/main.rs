@@ -13,7 +13,11 @@
 #![feature(abi_x86_interrupt)]
 #![feature(allocator_api)]
 #![feature(naked_functions)]
+#![feature(custom_test_frameworks)]
+#![test_runner(crate::test_runner)]
+#![reexport_test_harness_main = "test_main"]
 #![no_std] //< Kernels can't use std
+#![no_main]
 #![crate_name = "kernel"]
 
 use core::str::from_raw_parts;
@@ -111,6 +115,14 @@ struct MultibootMmapEntry {
     typ: u32,
 }
 
+#[cfg(test)]
+pub fn test_runner(tests: &[&dyn Fn()]) {
+    log!("Running {} tests", tests.len());
+    for test in tests {
+        test();
+    }
+}
+
 // Kernel entrypoint (called by arch/<foo>/start.S)
 #[no_mangle]
 pub unsafe extern "C" fn kmain(_multiboot_magic: u64, _info: *const MultibootInfo) -> ! {
@@ -132,6 +144,9 @@ pub unsafe extern "C" fn kmain(_multiboot_magic: u64, _info: *const MultibootInf
     memory::init(&mut allocator);
 
     read_page();
+
+    #[cfg(test)]
+    test_main();
 
     exec(user_space_prog_1 as *const () as u64, &mut allocator);
 

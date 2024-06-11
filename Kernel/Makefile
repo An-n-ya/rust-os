@@ -32,6 +32,7 @@ LINKFLAGS += -z max-page-size=0x1000
 
 RUSTFLAGS := --cfg arch__$(ARCH) -C soft-float
 RUSTFLAGS += -C panic=abort
+RUSTFLAGS += -Zpanic_abort_tests
 
 # Objects
 OBJS := start.o kernel.a
@@ -44,6 +45,10 @@ all: $(BIN)
 
 clean:
 	$(RM) -rf $(BIN) $(BIN).dsm $(OBJDIR)
+
+test:
+	RUSTFLAGS="$(RUSTFLAGS)" $(CARGO) test -Z build-std=core,alloc,compiler_builtins  --target=$(TARGETSPEC) --lib
+
 
 # Final link command
 $(BIN): $(OBJS) arch/$(ARCH)/link.ld
