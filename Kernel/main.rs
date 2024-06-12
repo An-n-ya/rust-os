@@ -59,6 +59,8 @@ mod memory;
 
 mod proc;
 
+mod sync;
+
 pub const KERNEL_BASE: u64 = 0xFFFFFFFF80000000;
 
 extern "C" {

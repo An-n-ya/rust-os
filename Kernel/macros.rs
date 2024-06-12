@@ -17,7 +17,12 @@ macro_rules! log{
 	( $($arg:tt)* ) => ({
 		// Import the Writer trait (required by write!)
 		use core::fmt::Write;
-		let _ = write!(&mut ::logging::Writer::get(module_path!()), $($arg)*);
+        let mut writer = ::logging::WRITER.lock();
+		let _ = write!(&mut *(writer), "[");
+		let _ = write!(&mut *(writer), module_path!());
+		let _ = write!(&mut *(writer), "] ");
+		let _ = write!(&mut *(writer), $($arg)*);
+		let _ = write!(&mut *(writer), "\n");
 	})
 }
 
