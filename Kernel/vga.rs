@@ -1,14 +1,8 @@
-use core::{
-    fmt::Write,
-    sync::atomic::{AtomicU8, AtomicUsize, Ordering},
-};
+use core::fmt::Write;
 
-use crate::KERNEL_BASE;
+use crate::{sync::spin::SpinMutex, KERNEL_BASE};
 
-// NOTE: This should be safe, TerminalWriter is sync, and AtomicPtr satisfies the constraint on a
-// global. We initialize this at the start of main, so everyone else should be able to access the
-// pointer without crashing
-pub static TERMINAL_WRITER: TerminalWriter = TerminalWriter::new();
+pub static TERMINAL_WRITER: SpinMutex<TerminalWriter> = SpinMutex::new(TerminalWriter::new());
 
 /* Hardware text mode color constants. */
 #[allow(dead_code)]
@@ -43,62 +37,61 @@ const VGA_WIDTH: usize = 80;
 const VGA_HEIGHT: usize = 25;
 
 pub struct TerminalWriter {
-    terminal_pos: AtomicUsize,
-    terminal_color: AtomicU8,
-    terminal_buffer: *mut u16,
+    terminal_pos: usize,
+    terminal_color: u8,
+    terminal_buffer: u64,
 }
 
 impl TerminalWriter {
     const fn new() -> TerminalWriter {
-        let terminal_pos = AtomicUsize::new(0);
         let terminal_color = vga_entry_color(VgaColor::LightGrey, VgaColor::Black);
-        let terminal_buffer = (0xB8000 + KERNEL_BASE) as *mut u16;
+        let terminal_buffer = 0xB8000 + KERNEL_BASE;
 
         TerminalWriter {
-            terminal_pos,
-            terminal_color: AtomicU8::new(terminal_color),
+            terminal_pos: 0,
+            terminal_color,
             terminal_buffer,
         }
     }
 
-    pub fn init() -> &'static TerminalWriter {
-        let color = TERMINAL_WRITER.terminal_color.load(Ordering::Relaxed);
+    pub fn init() {
+        let writer = TERMINAL_WRITER.lock();
+
+        let color = writer.terminal_color;
         for y in 0..VGA_HEIGHT {
             for x in 0..VGA_WIDTH {
                 let index = y * VGA_WIDTH + x;
                 unsafe {
-                    *TERMINAL_WRITER.terminal_buffer.add(index) = vga_entry(b' ', color);
+                    *(writer.terminal_buffer as *mut u16).add(index) = vga_entry(b' ', color);
                 }
             }
         }
-        &TERMINAL_WRITER
     }
 
     #[allow(dead_code)]
-    pub fn set_color(&self, color: u8) {
-        self.terminal_color.store(color, Ordering::Relaxed);
+    pub fn set_color(&mut self, color: u8) {
+        self.terminal_color = color;
     }
 
-    fn putchar(&self, c: u8) {
+    fn putchar(&mut self, c: u8) {
         if c == b'\n' {
-            let mut pos = self.terminal_pos.load(Ordering::Relaxed);
+            let mut pos = self.terminal_pos;
             pos += VGA_WIDTH - (pos % VGA_WIDTH);
-            self.terminal_pos.store(pos, Ordering::Relaxed);
+            self.terminal_pos = pos;
             return;
         }
 
-        let color = self.terminal_color.load(Ordering::Relaxed);
-        // Increment col as we always try to advance the cursor after we write
-        let pos = self.terminal_pos.load(Ordering::Relaxed);
+        let color = self.terminal_color;
+        let pos = self.terminal_pos;
         let new_pos = (pos + 1) % (VGA_HEIGHT * VGA_WIDTH);
-        self.terminal_pos.store(new_pos, Ordering::Relaxed);
+        self.terminal_pos = new_pos;
         // self.terminal_pos.store(pos, Ordering::Relaxed);
         unsafe {
-            *self.terminal_buffer.add(pos) = vga_entry(c, color);
+            *(self.terminal_buffer as *mut u16).add(pos) = vga_entry(c, color);
         }
     }
 
-    fn write(&self, data: &[u8]) {
+    fn write(&mut self, data: &[u8]) {
         for c in data {
             self.putchar(*c);
         }

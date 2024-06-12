@@ -30,14 +30,10 @@ macro_rules! print {
     ($($arg:tt)*) => {
         #[allow(unused_unsafe)]
         unsafe {
-            use $crate::vga::TerminalWriter;
             use $crate::interrupts;
             use core::fmt::Write as FmtWrite;
             interrupts::run_without_interrupt(|| {
-                let writer = &$crate::vga::TERMINAL_WRITER as *const TerminalWriter;
-                // write_fmt needs writer as &mut, but we only access it as *const. Cast to fulfil the
-                // API requirements
-                let writer = writer as *mut TerminalWriter;
+                let mut writer = ::vga::TERMINAL_WRITER.lock();
                 #[allow(invalid_reference_casting)]
                 write!(&mut *(writer), $($arg)*).expect("Failed to print");
             });
