@@ -61,6 +61,8 @@ mod proc;
 
 mod sync;
 
+mod stack;
+
 pub const KERNEL_BASE: u64 = 0xFFFFFFFF80000000;
 
 extern "C" {

@@ -15,6 +15,8 @@ use crate::{
     },
 };
 
+mod task;
+
 const MSR_STAR: u64 = 0xC000_0081;
 const MSR_LSTAR: u64 = 0xC000_0082;
 const MSR_FMASK: u64 = 0xC000_0084;
