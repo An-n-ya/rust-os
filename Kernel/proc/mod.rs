@@ -15,6 +15,7 @@ use crate::{
     },
 };
 
+pub mod sheduler;
 mod task;
 
 const MSR_STAR: u64 = 0xC000_0081;

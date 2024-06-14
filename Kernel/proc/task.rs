@@ -1,8 +1,4 @@
-use core::{
-    alloc::Layout,
-    borrow::{Borrow, BorrowMut},
-    ptr::NonNull,
-};
+use core::{alloc::Layout, ptr::NonNull};
 
 use alloc::boxed::Box;
 
@@ -124,13 +120,15 @@ extern "C" fn context_switch(_prev: &mut Context, next: &Context) {
     }
 }
 
+#[repr(C)]
 pub struct X86Task {
     context: NonNull<Context>,
     kernel_stack: Box<[u8]>,
     page_table: NonNull<PageTable<Level4>>,
 }
+unsafe impl Sync for X86Task {}
 
-pub fn x86_context_switch(prev: &mut X86Task, next: &mut X86Task) {
+pub fn x86_context_switch(prev: &mut X86Task, next: &X86Task) {
     unsafe {
         TSS.privilege_stack_table[0] = {
             let stack_end = next.kernel_stack.as_ptr() as *const _ as usize + KERNEL_STACK_SIZE;
@@ -142,6 +140,9 @@ pub fn x86_context_switch(prev: &mut X86Task, next: &mut X86Task) {
 }
 
 impl X86Task {
+    pub fn get_mut(&self) -> &mut X86Task {
+        unsafe { &mut *(self as *const _ as *mut _) }
+    }
     pub fn new_kernel(entry_point: u64) -> X86Task {
         let task_stack = unsafe {
             alloc::alloc::alloc_zeroed(Layout::from_size_align_unchecked(KERNEL_STACK_SIZE, 0x1000))
