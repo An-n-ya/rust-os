@@ -9,6 +9,9 @@ pub struct Once<T> {
     data: UnsafeCell<MaybeUninit<T>>,
 }
 
+unsafe impl<T: Send> Sync for Once<T> {}
+unsafe impl<T: Send> Send for Once<T> {}
+
 #[repr(transparent)]
 struct AtomicStatus(AtomicU8);
 

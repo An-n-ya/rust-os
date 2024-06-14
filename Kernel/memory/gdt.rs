@@ -4,7 +4,7 @@ const STACK_SIZE: usize = 0x2000;
 pub static mut STACK: [u8; STACK_SIZE] = [0; STACK_SIZE];
 pub static mut PRIV_TSS_STACK: [u8; STACK_SIZE] = [0; STACK_SIZE];
 
-static mut TSS: TaskStateSegment = TaskStateSegment::new();
+pub static mut TSS: TaskStateSegment = TaskStateSegment::new();
 static mut GDT: GlobalDescriptorTable = GlobalDescriptorTable::new();
 
 pub const CS_SEL_KERNEL: u16 = 1 << 3 | 0;

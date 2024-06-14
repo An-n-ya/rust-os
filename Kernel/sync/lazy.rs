@@ -7,6 +7,8 @@ pub struct Lazy<T, F = fn() -> T> {
     cell: OnceCell<T>,
     init: Cell<Option<F>>,
 }
+unsafe impl<T: Send> Sync for Lazy<T> {}
+unsafe impl<T: Send> Send for Lazy<T> {}
 
 impl<T, F> Lazy<T, F> {
     pub const fn new(init: F) -> Lazy<T, F> {
