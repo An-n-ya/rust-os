@@ -1,9 +1,10 @@
-use core::cell::Cell;
+use core::{arch, cell::Cell};
 
 use alloc::{collections::VecDeque, sync::Arc};
 
 use crate::{
     hlt,
+    interrupts::enable,
     sync::{lazy::Lazy, spin::SpinMutex},
 };
 
@@ -21,9 +22,9 @@ unsafe impl Send for Scheduler {}
 
 impl Scheduler {
     pub fn new() -> Self {
-        let init_task = Arc::new(X86Task::new_kernel(kernel_1 as *const () as u64));
-        let idle_task = Arc::new(X86Task::new_kernel(idle as *const () as u64));
-        let preempt_task = Arc::new(X86Task::new_kernel(preempt as *const () as u64));
+        let init_task = Arc::new(X86Task::new_kernel(kernel_1 as *const () as u64, 0));
+        let idle_task = Arc::new(X86Task::new_kernel(idle as *const () as u64, 1));
+        let preempt_task = Arc::new(X86Task::new_kernel(preempt as *const () as u64, 2));
         let mut deque = VecDeque::new();
         deque.push_back(init_task);
         let queue = Arc::new(SpinMutex::new(deque));
@@ -41,25 +42,35 @@ impl Scheduler {
 }
 
 fn preempt() {
-    let sched = &*SCHEDULAR;
-    let mut queue = sched.queue.lock();
-    let t = queue.pop_front();
-    if let Some(task) = t {
-        let prev = sched.current_task.replace(task.clone());
-        queue.push_back(prev);
+    loop {
+        let sched = &*SCHEDULAR;
+        let mut queue = sched.queue.lock();
+        let t = queue.pop_front();
+        if let Some(task) = t {
+            let prev = sched.current_task.replace(task.clone());
+            queue.push_back(prev);
 
-        drop(queue);
+            drop(queue);
 
-        x86_context_switch(sched.preempt_task.as_ref().get_mut(), task.as_ref())
-    } else {
-        panic!("cannot find task in scheduler queue")
+            x86_context_switch(sched.preempt_task.as_ref().get_mut(), task.as_ref())
+        } else {
+            panic!("cannot find task in scheduler queue")
+        }
     }
 }
 
 fn kernel_1() {
-    log!("kernel1");
+    loop {
+        // for _ in 0..1000000 {
+        //     unsafe { arch::asm!("nop") };
+        // }
+        log!("kernel1");
+    }
 }
 
 fn idle() {
-    hlt();
+    loop {
+        enable();
+        hlt();
+    }
 }

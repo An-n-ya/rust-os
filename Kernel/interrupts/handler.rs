@@ -81,6 +81,7 @@ pub extern "x86-interrupt" fn timer_interrupt_handler(_frame: ExceptionFrame) {
     PIC.eof(0x20);
     sched.preempt();
 }
+
 pub extern "x86-interrupt" fn general_protection_fault_handler(
     frame: ExceptionFrame,
     error_code: u64,

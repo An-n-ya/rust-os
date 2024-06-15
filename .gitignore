@@ -1,6 +1,7 @@
 .*
 
 /Kernel/target
+/Kernel/initramfs
 
 /*.dsm
 /*.bin

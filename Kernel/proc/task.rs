@@ -64,7 +64,6 @@ extern "C" fn iretq_init() -> ! {
         core::arch::asm!(
             "
             cli
-            add rsp, 8
             pop r15
             pop r14
             pop r13
@@ -89,8 +88,9 @@ extern "C" fn iretq_init() -> ! {
     }
 }
 
+// FIXME: change prev to pointer
 #[naked]
-extern "C" fn context_switch(_prev: &mut Context, next: &Context) {
+extern "C" fn context_switch(prev: &mut NonNull<Context>, next: &Context) {
     unsafe {
         core::arch::asm!(
             "
@@ -123,6 +123,7 @@ extern "C" fn context_switch(_prev: &mut Context, next: &Context) {
 #[repr(C)]
 pub struct X86Task {
     context: NonNull<Context>,
+    id: u8,
     kernel_stack: Box<[u8]>,
     page_table: NonNull<PageTable<Level4>>,
 }
@@ -135,15 +136,19 @@ pub fn x86_context_switch(prev: &mut X86Task, next: &X86Task) {
             stack_end as u64
         };
         next.page_table.as_ref().enable();
-        context_switch(prev.context.as_mut(), next.context.as_ref());
+        let next_c = next.context.as_ref();
+        context_switch(&mut prev.context, next_c);
     }
 }
 
 impl X86Task {
     pub fn get_mut(&self) -> &mut X86Task {
-        unsafe { &mut *(self as *const _ as *mut _) }
+        #[allow(invalid_reference_casting)]
+        unsafe {
+            &mut *(self as *const _ as *mut _)
+        }
     }
-    pub fn new_kernel(entry_point: u64) -> X86Task {
+    pub fn new_kernel(entry_point: u64, id: u8) -> X86Task {
         let task_stack = unsafe {
             alloc::alloc::alloc_zeroed(Layout::from_size_align_unchecked(KERNEL_STACK_SIZE, 0x1000))
                 .add(KERNEL_STACK_SIZE)
@@ -159,7 +164,7 @@ impl X86Task {
         kframe.cs = CS_SEL_KERNEL as usize;
         kframe.rip = entry_point as usize;
         kframe.rsp = task_stack as usize;
-        kframe.rflags = 0;
+        kframe.rflags = 0x200;
 
         let context = unsafe { stack.offset::<Context>() };
         *context = Context::default();
@@ -167,6 +172,7 @@ impl X86Task {
 
         Self {
             context: unsafe { NonNull::new_unchecked(context) },
+            id,
             kernel_stack: alloc::vec![0u8; KERNEL_STACK_SIZE].into_boxed_slice(),
             page_table: unsafe { NonNull::new_unchecked(kernel_page_table()) },
         }

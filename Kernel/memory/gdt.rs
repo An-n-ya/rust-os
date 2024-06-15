@@ -14,7 +14,7 @@ pub const DS_SEL_USER: u16 = 5 << 3 | 3;
 pub const CS_SEL_USER: u16 = 6 << 3 | 3;
 
 #[repr(C, packed(4))]
-struct TaskStateSegment {
+pub struct TaskStateSegment {
     reserved_1: u32,
     // use virtual address
     pub privilege_stack_table: [u64; 3],

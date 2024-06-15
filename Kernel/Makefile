@@ -47,7 +47,7 @@ clean:
 	$(RM) -rf $(BIN) $(BIN).dsm $(OBJDIR)
 
 test:
-	RUSTFLAGS="$(RUSTFLAGS)" $(CARGO) test -Z build-std=core,alloc,compiler_builtins  --target=$(TARGETSPEC) --lib
+	RUSTFLAGS="$(RUSTFLAGS)" $(CARGO) test -Z build-std=core,alloc,compiler_builtins -Z build-std-features=compiler-builtins-mem  --target=$(TARGETSPEC) --lib
 
 run: $(BIN)
 	qemu-system-x86_64 -kernel ../kernel.amd64.bin -serial stdio -no-reboot
@@ -70,7 +70,7 @@ endif
 # Compile rust kernel object
 $(OBJDIR)kernel.a: PHONY Makefile $(TARGETSPEC)
 	@mkdir -p $(dir $@)
-	RUSTFLAGS="$(RUSTFLAGS)" $(CARGO) build -Z build-std=core,alloc,compiler_builtins --target=$(TARGETSPEC)
+	RUSTFLAGS="$(RUSTFLAGS)" $(CARGO) build -Z build-std=core,alloc,compiler_builtins -Z build-std-features=compiler-builtins-mem --target=$(TARGETSPEC)
 	@cp --preserve target/target/debug/libkernel.a $@
 
 # Compile architecture's assembly stub

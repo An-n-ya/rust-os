@@ -181,7 +181,6 @@ pub fn exec<A>(user_space_fn_in_kernel: u64, allocator: &mut A)
 where
     A: FrameAllocator,
 {
-    // disable();
     log!("fn addr {:#X}", user_space_fn_in_kernel);
     let user_space_fn_phys = virt_to_physical(user_space_fn_in_kernel);
     let page_phys_start = (user_space_fn_phys >> 12) << 12;
