@@ -22,6 +22,7 @@
 
 use core::str::from_raw_parts;
 
+use fs::ide;
 #[allow(unused_imports)]
 use interrupts::divide_by_zero;
 use memory::{frame::Allocator, gdt, read_page, virt_to_physical};
@@ -62,6 +63,8 @@ mod proc;
 mod sync;
 
 mod stack;
+
+mod fs;
 
 pub const KERNEL_BASE: u64 = 0xFFFFFFFF80000000;
 
@@ -176,6 +179,7 @@ fn init() {
     interrupts::init();
     gdt::init();
     proc::init_syscalls();
+    ide::ide_init();
 }
 
 #[allow(dead_code)]

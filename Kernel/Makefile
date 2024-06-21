@@ -49,12 +49,15 @@ clean:
 test:
 	RUSTFLAGS="$(RUSTFLAGS)" $(CARGO) test -Z build-std=core,alloc,compiler_builtins -Z build-std-features=compiler-builtins-mem  --target=$(TARGETSPEC) --lib
 
+# use grub instead of qemu's -kernel option
+# use ide option
+QEMUOPTS = -kernel ../kernel.amd64.bin -no-reboot -drive file=../fs.img,index=1,media=disk,format=raw
 run: $(BIN)
-	qemu-system-x86_64 -kernel ../kernel.amd64.bin -serial stdio -no-reboot
+	qemu-system-x86_64 -serial stdio $(QEMUOPTS)
 debug: $(BIN)
-	qemu-system-x86_64 -kernel ../kernel.amd64.bin -serial stdio -no-reboot -d int -s -S
+	qemu-system-x86_64 -serial stdio -d int -s -S $(QEMUOPTS)
 monitor: $(BIN)
-	qemu-system-x86_64 -kernel ../kernel.amd64.bin -monitor stdio -no-reboot -d int -s -S
+	qemu-system-x86_64 -monitor stdio -d int -s -S $(QEMUOPTS)
 
 
 # Final link command

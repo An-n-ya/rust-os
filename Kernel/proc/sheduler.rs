@@ -23,10 +23,12 @@ unsafe impl Send for Scheduler {}
 impl Scheduler {
     pub fn new() -> Self {
         let init_task = Arc::new(X86Task::new_kernel(kernel_1 as *const () as u64, 0));
+        let task2 = Arc::new(X86Task::new_kernel(kernel_2 as *const () as u64, 3));
         let idle_task = Arc::new(X86Task::new_kernel(idle as *const () as u64, 1));
         let preempt_task = Arc::new(X86Task::new_kernel(preempt as *const () as u64, 2));
         let mut deque = VecDeque::new();
         deque.push_back(init_task);
+        deque.push_back(task2);
         let queue = Arc::new(SpinMutex::new(deque));
         Self {
             queue,
@@ -61,10 +63,18 @@ fn preempt() {
 
 fn kernel_1() {
     loop {
-        // for _ in 0..1000000 {
-        //     unsafe { arch::asm!("nop") };
-        // }
+        for _ in 0..1000000 {
+            unsafe { arch::asm!("nop") };
+        }
         log!("kernel1");
+    }
+}
+fn kernel_2() {
+    loop {
+        for _ in 0..1000000 {
+            unsafe { arch::asm!("nop") };
+        }
+        log!("2222kernel2222");
     }
 }
 

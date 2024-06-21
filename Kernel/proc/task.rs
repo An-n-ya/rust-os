@@ -88,7 +88,6 @@ extern "C" fn iretq_init() -> ! {
     }
 }
 
-// FIXME: change prev to pointer
 #[naked]
 extern "C" fn context_switch(prev: &mut NonNull<Context>, next: &Context) {
     unsafe {
