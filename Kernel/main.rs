@@ -14,6 +14,7 @@
 #![feature(allocator_api)]
 #![feature(naked_functions)]
 #![feature(custom_test_frameworks)]
+#![feature(core_io_borrowed_buf)]
 #![test_runner(crate::test_runner)]
 #![reexport_test_harness_main = "test_main"]
 #![no_std] //< Kernels can't use std
@@ -46,6 +47,8 @@ pub mod unwind;
 
 /// Logging code
 mod logging;
+
+mod read_struct;
 
 /// vga
 mod vga;

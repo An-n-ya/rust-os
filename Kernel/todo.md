@@ -1,0 +1,3 @@
+- [ ] 解析分区表
+- [ ] cursor needed
+- [ ] 解析 elf 文件
