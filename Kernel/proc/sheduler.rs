@@ -3,6 +3,7 @@ use core::{arch, cell::Cell};
 use alloc::{collections::VecDeque, sync::Arc};
 
 use crate::{
+    fs::test_ide_read,
     hlt,
     interrupts::enable,
     sync::{lazy::Lazy, spin::SpinMutex},

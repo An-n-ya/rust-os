@@ -135,17 +135,17 @@ pub unsafe extern "C" fn kmain(_multiboot_magic: u64, _info: *const MultibootInf
     let start_addr = &kernel_start as *const u8 as u64;
     let start_addr = virt_to_physical(start_addr);
     let end_addr = virt_to_physical(end_addr);
-    log!("kernel start: {:#X}", start_addr);
-    log!("kernel end: {:#X}", end_addr);
+    // log!("kernel start: {:#X}", start_addr);
+    // log!("kernel end: {:#X}", end_addr);
     let mut allocator = Allocator::new(_info, (start_addr, end_addr));
     memory::init(&mut allocator);
 
-    read_page();
+    test_ide_read();
+
+    // read_page();
 
     #[cfg(test)]
     test_main();
-
-    test_ide_read();
 
     // let sched = &*SCHEDULAR;
     // sched.preempt();

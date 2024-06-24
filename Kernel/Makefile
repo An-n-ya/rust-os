@@ -55,7 +55,7 @@ QEMUOPTS = -kernel ../kernel.amd64.bin -no-reboot -drive file=../fs.img,index=1,
 run: $(BIN)
 	qemu-system-x86_64 -serial stdio $(QEMUOPTS)
 debug: $(BIN)
-	qemu-system-x86_64 -serial stdio -d int -s -S $(QEMUOPTS)
+	qemu-system-x86_64 -serial stdio -d int -s -S  $(QEMUOPTS)
 monitor: $(BIN)
 	qemu-system-x86_64 -monitor stdio -d int -s -S $(QEMUOPTS)
 

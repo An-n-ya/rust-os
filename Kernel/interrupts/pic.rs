@@ -40,17 +40,18 @@ impl PicController {
         self.slave.data.write_u8(0x01); // ICW4
 
         self.master.data.write_u8(0xf8); // open IRQ0 - time  IRQ1 - keyboard IRQ2 - slave
-        self.slave.data.write_u8(0xbf); // open IRQ14 - ide
+        self.slave.data.write_u8(0x3f); // open IRQ14,15 - ide
 
         log!("pic init complete");
     }
 
     pub fn eof(&self, index: u16) {
         assert!(index >= 0x20 && index <= 0x2f);
-        if index >= 0x20 {
+        if index >= 0x20 && index < 0x28 {
             self.master.control.write_u8(0x20);
         } else {
             self.master.control.write_u8(0x20);
+            self.slave.control.write_u8(0x20);
         }
     }
 }

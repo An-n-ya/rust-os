@@ -11,9 +11,11 @@ const SECTOR_SIZE: usize = 512;
 const IDE_BUSY: u8 = 0x80;
 const IDE_READY: u8 = 0x40;
 
+const INT_PORT: Port = Port::new(0x3f6);
 const DATA_PORT: Port = Port::new(0x1f0);
 const CMD_PORT: Port = Port::new(0x1f7);
 const DEV_PORT: Port = Port::new(0x1f6);
+const SEC_PORT: Port = Port::new(0x1f2);
 const LSB1_PORT: Port = Port::new(0x1f3);
 const LSB2_PORT: Port = Port::new(0x1f4);
 const LSB3_PORT: Port = Port::new(0x1f5);
@@ -57,6 +59,8 @@ pub fn ide_start(buf: &Buf) {
             0
         }
     };
+    INT_PORT.write_u8(0); // generate interrupt
+    SEC_PORT.write_u8(sector_per_block as u8); // NOTE: this setting is necessary!
     LSB1_PORT.write_u8((sector & 0xff) as u8);
     LSB2_PORT.write_u8(((sector >> 8) & 0xff) as u8);
     LSB2_PORT.write_u8(((sector >> 16) & 0xff) as u8);
@@ -67,13 +71,14 @@ pub fn ide_start(buf: &Buf) {
 
     match buf.flag {
         super::buf::Flag::Read => {
-            CMD_PORT.write_u8(0x20);
-            // wait interrupt
             unsafe {
-                IDE_LOCK.store(true, core::sync::atomic::Ordering::Release);
-
+                IDE_LOCK.store(true, core::sync::atomic::Ordering::SeqCst);
+            }
+            CMD_PORT.write_u8(0x20);
+            // // waiting interrupt
+            unsafe {
                 loop {
-                    if !IDE_LOCK.load(core::sync::atomic::Ordering::Acquire) {
+                    if !IDE_LOCK.load(core::sync::atomic::Ordering::SeqCst) {
                         break;
                     }
                 }
@@ -87,7 +92,9 @@ pub fn ide_start(buf: &Buf) {
 
 pub fn ide_intr() {
     unsafe {
-        CMD_PORT.read_u8();
-        IDE_LOCK.store(false, core::sync::atomic::Ordering::Release);
+        if IDE_LOCK.load(core::sync::atomic::Ordering::SeqCst) {
+            CMD_PORT.read_u8();
+            IDE_LOCK.store(false, core::sync::atomic::Ordering::SeqCst);
+        }
     }
 }

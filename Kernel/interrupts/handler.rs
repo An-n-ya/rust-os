@@ -76,14 +76,14 @@ pub extern "x86-interrupt" fn double_fault_handler(frame: ExceptionFrame, error_
 }
 
 pub extern "x86-interrupt" fn disk_interrupt_handler(_frame: ExceptionFrame) {
-    log!("disk intr");
     ide_intr();
+    PIC.eof(0x2e);
 }
 pub extern "x86-interrupt" fn timer_interrupt_handler(_frame: ExceptionFrame) {
     print!(".");
-    let sched = &*SCHEDULAR;
+    // let sched = &*SCHEDULAR;
     PIC.eof(0x20);
-    sched.preempt();
+    // sched.preempt();
 }
 
 pub extern "x86-interrupt" fn general_protection_fault_handler(

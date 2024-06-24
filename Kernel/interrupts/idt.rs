@@ -183,7 +183,6 @@ pub fn init_idt() {
         IDT.set_handler_with_errorcode(0x0D, general_protection_fault_handler);
         IDT.set_handler(0x20, timer_interrupt_handler);
         IDT.set_handler(0x2e, disk_interrupt_handler);
-        IDT.set_handler(0x2f, disk_interrupt_handler);
         IDT.load();
     }
 }
