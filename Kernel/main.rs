@@ -31,8 +31,6 @@ use proc::{exec, sheduler::SCHEDULAR, user_space_prog_1};
 use vga::TerminalWriter;
 
 /// Macros, need to be loaded before everything else due to how rust parses
-#[macro_use]
-mod macros;
 
 // Achitecture-specific modules
 #[cfg(target_arch = "x86_64")]
@@ -42,30 +40,19 @@ pub mod arch;
 #[path = "arch/x86/mod.rs"]
 pub mod arch;
 
-/// Exception handling (panic)
-pub mod unwind;
-
-/// Logging code
-mod logging;
-
-mod read_struct;
+#[macro_use]
+mod utils;
 
 /// vga
 mod vga;
 
 mod interrupts;
 
-mod backtrace;
-
-mod port;
-
 mod memory;
 
 mod proc;
 
 mod sync;
-
-mod stack;
 
 mod fs;
 

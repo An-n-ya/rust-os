@@ -10,7 +10,7 @@
  * its use, and the author takes no liability.
  */
 
-use crate::{backtrace::backtrace, hlt};
+use crate::{hlt, utils::backtrace::backtrace};
 
 #[panic_handler]
 pub fn panic_implementation(info: &::core::panic::PanicInfo) -> ! {

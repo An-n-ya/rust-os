@@ -7,7 +7,7 @@ use crate::{
         gdt::{CS_SEL_KERNEL, DS_SEL_KERNEL, TSS},
         page_table::{kernel_page_table, Level4, PageTable},
     },
-    stack::Stack,
+    utils::stack::Stack,
 };
 
 const KERNEL_STACK_SIZE: usize = 0x1000;

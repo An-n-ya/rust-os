@@ -9,8 +9,9 @@ pub fn backtrace(mut frame_pointer: *const u64) {
             }
             // log!("frame_pointer: {:#X}", frame_pointer as u64);
             // log!("value: {:#X}", *frame_pointer);
+            #[allow(unused)]
             let return_address = *frame_pointer.add(1);
-            log!("BACKTRACE return_address: {:#X}", return_address);
+            // log!("BACKTRACE return_address: {:#X}", return_address);
             frame_pointer = *frame_pointer as *const u64;
         }
     }
