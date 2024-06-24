@@ -48,4 +48,16 @@ impl Port {
         }
         res
     }
+    pub fn read_u32_to(&self, addr: *const u32, cnt: usize) {
+        unsafe {
+            core::arch::asm!(
+                "cld
+                rep insl",
+                in("dx") self.port,
+                inout("edi") addr => _,
+                inout("ecx") cnt => _,
+                options(nostack, preserves_flags, att_syntax), // we have to use att because of the rep inst
+            )
+        }
+    }
 }

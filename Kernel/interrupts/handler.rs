@@ -1,4 +1,4 @@
-use crate::{hlt, interrupts::pic::PIC, proc::sheduler::SCHEDULAR};
+use crate::{fs::ide::ide_intr, hlt, interrupts::pic::PIC, proc::sheduler::SCHEDULAR};
 
 use super::idt::ExceptionFrame;
 pub extern "x86-interrupt" fn divide_zero_handler(frame: ExceptionFrame) {
@@ -75,6 +75,10 @@ pub extern "x86-interrupt" fn double_fault_handler(frame: ExceptionFrame, error_
     hlt();
 }
 
+pub extern "x86-interrupt" fn disk_interrupt_handler(_frame: ExceptionFrame) {
+    log!("disk intr");
+    ide_intr();
+}
 pub extern "x86-interrupt" fn timer_interrupt_handler(_frame: ExceptionFrame) {
     print!(".");
     let sched = &*SCHEDULAR;

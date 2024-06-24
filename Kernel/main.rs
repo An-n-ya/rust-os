@@ -23,7 +23,7 @@
 
 use core::str::from_raw_parts;
 
-use fs::ide;
+use fs::{ide, test_ide_read};
 #[allow(unused_imports)]
 use interrupts::divide_by_zero;
 use memory::{frame::Allocator, gdt, read_page, virt_to_physical};
@@ -144,6 +144,8 @@ pub unsafe extern "C" fn kmain(_multiboot_magic: u64, _info: *const MultibootInf
 
     #[cfg(test)]
     test_main();
+
+    test_ide_read();
 
     // let sched = &*SCHEDULAR;
     // sched.preempt();

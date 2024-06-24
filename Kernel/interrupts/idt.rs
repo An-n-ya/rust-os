@@ -1,10 +1,11 @@
 use core::fmt;
 
 use super::handler::{
-    bound_range_exceeded_interrupt, break_point_interrupt, divide_zero_handler,
-    double_fault_handler, general_protection_fault_handler, invalid_opcode_interrupt,
-    invalid_tss_interrupt, non_maskable_interrupt, overflow_interrupt, page_fault_handler,
-    segment_not_present_interrupt, stack_segment_fault_interrupt, timer_interrupt_handler,
+    bound_range_exceeded_interrupt, break_point_interrupt, disk_interrupt_handler,
+    divide_zero_handler, double_fault_handler, general_protection_fault_handler,
+    invalid_opcode_interrupt, invalid_tss_interrupt, non_maskable_interrupt, overflow_interrupt,
+    page_fault_handler, segment_not_present_interrupt, stack_segment_fault_interrupt,
+    timer_interrupt_handler,
 };
 
 /*
@@ -181,6 +182,8 @@ pub fn init_idt() {
         IDT.set_handler_with_errorcode(0x0E, page_fault_handler);
         IDT.set_handler_with_errorcode(0x0D, general_protection_fault_handler);
         IDT.set_handler(0x20, timer_interrupt_handler);
+        IDT.set_handler(0x2e, disk_interrupt_handler);
+        IDT.set_handler(0x2f, disk_interrupt_handler);
         IDT.load();
     }
 }
