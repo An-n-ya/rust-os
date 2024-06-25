@@ -51,7 +51,7 @@ test:
 
 # use grub instead of qemu's -kernel option
 # use ide option
-QEMUOPTS = -kernel ../kernel.amd64.bin -no-reboot -drive file=../fs.img,index=1,media=disk,format=raw
+QEMUOPTS = -kernel ../kernel.amd64.bin -no-reboot -drive file=../fs.img,index=1,media=disk,format=raw -device rtl8139,bus=pci.0,addr=4
 run: $(BIN)
 	qemu-system-x86_64 -serial stdio $(QEMUOPTS)
 debug: $(BIN)

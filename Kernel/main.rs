@@ -28,6 +28,7 @@ use fs::{ide, test_ide_read};
 use interrupts::divide_by_zero;
 use memory::{frame::Allocator, gdt, read_page, virt_to_physical};
 use proc::{exec, sheduler::SCHEDULAR, user_space_prog_1};
+use utils::PCI;
 use vga::TerminalWriter;
 
 /// Macros, need to be loaded before everything else due to how rust parses
@@ -140,7 +141,9 @@ pub unsafe extern "C" fn kmain(_multiboot_magic: u64, _info: *const MultibootInf
     let mut allocator = Allocator::new(_info, (start_addr, end_addr));
     memory::init(&mut allocator);
 
-    test_ide_read();
+    // test_ide_read();
+
+    PCI.print_all_device();
 
     // read_page();
 
